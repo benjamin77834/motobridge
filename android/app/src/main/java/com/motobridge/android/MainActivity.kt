@@ -301,6 +301,14 @@ private fun SettingsControls(controller: BridgeController) {
                 Text("Iniciar en intercom al conectar", Modifier.weight(1f))
                 Switch(checked = controller.autoIntercom, onCheckedChange = { controller.updateAutoIntercom(it) })
             }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Música + intercom automático 🎵")
+                    Text("La música suena a todo volumen y baja sola cuando alguien habla.",
+                         fontSize = 11.sp, color = Color.Gray)
+                }
+                Switch(checked = controller.autoMusicMode, onCheckedChange = { controller.updateAutoMusicMode(it) })
+            }
         }
     }
 

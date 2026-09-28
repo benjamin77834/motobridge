@@ -115,6 +115,40 @@ final class NetworkBridgeController: ObservableObject {
     }
     private var coexistWithOtherAudioSilent = false
 
+    /// Modo "Música + intercom automático": cuando NADIE habla, suelta el
+    /// micrófono y deja la sesión en modo música (A2DP estéreo por CarPlay/
+    /// bocinas). Al hablar tú o llegar voz de otro rider, cambia a modo voz
+    /// (HFP + micrófono) y la música baja (duck); al cesar la voz vuelve solo a
+    /// música. Pensado para escuchar Spotify/CarPlay en la moto sin perder el
+    /// intercom. Incompatible con CallKit (que corta la música).
+    @Published var autoMusicMode: Bool = (UserDefaults.standard.object(forKey: "autoMusicMode") as? Bool) ?? false {
+        didSet {
+            UserDefaults.standard.set(autoMusicMode, forKey: "autoMusicMode")
+            guard oldValue != autoMusicMode else { return }
+            if autoMusicMode {
+                // Incompatible con modo llamada: se desactiva para que la música suene.
+                if useCallKit { useCallKit = false }
+                coexistWithOtherAudio = true
+            }
+            if isRunning {
+                let wasRunning = isRunning
+                stop()
+                if wasRunning {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.start() }
+                }
+            }
+        }
+    }
+
+    /// Estado interno del conmutador música/voz.
+    private enum AudioFocus { case music, voice }
+    private var audioFocus: AudioFocus = .music
+    /// Última vez que hubo voz (mi mic abierto o audio entrante de un rider).
+    private var lastVoiceActivity = Date.distantPast
+    /// Segundos de silencio antes de volver a música full.
+    private let voiceHangoverSeconds: TimeInterval = 1.5
+    private var focusTimer: Timer?
+
     /// Nivel de entrada del micrófono (0.0–1.0) para el medidor visual.
     @Published private(set) var inputLevel: Float = 0
 
@@ -350,13 +384,16 @@ final class NetworkBridgeController: ObservableObject {
         }
         switch msg.type {
         case .group:
+            noteVoiceActivity()
             audioIO.playReceivedAudio(msg.audio)
         case .privateWhisper:
             // Solo reproducir si el mensaje privado es para mí (por nombre).
             if msg.targetId == myNameId {
+                noteVoiceActivity()
                 audioIO.playReceivedAudio(msg.audio)
             }
         case .alarm:
+            noteVoiceActivity()
             // Emergencia: siempre se reproduce, aunque estés en privado/música.
             audioIO.playReceivedAudio(msg.audio)
             // Anunciar por voz una sola vez por ráfaga de alarma, diciendo QUIÉN
@@ -416,6 +453,18 @@ final class NetworkBridgeController: ObservableObject {
             coexistWithOtherAudioSilent = true
             DispatchQueue.main.async { self.coexistWithOtherAudio = false }
             CallKitManager.shared.startCall(peerName: connectedPeers.first?.name ?? "MotoBridge")
+            return
+        }
+
+        // Modo música automático: arrancar en reposo (música full, sin mic).
+        // El micrófono se activa solo cuando hay voz.
+        if autoMusicMode {
+            audioFocus = .music
+            lastVoiceActivity = .distantPast
+            audioQueue.async { [weak self] in
+                self?.configureSessionForMusic()
+            }
+            startFocusTimer()
             return
         }
 
@@ -517,6 +566,8 @@ final class NetworkBridgeController: ObservableObject {
     func stop() {
         guard isRunning else { return }
         isRunning = false
+        stopFocusTimer()
+        audioFocus = .music
         setTransmitting(false)
         knownPeerNames.removeAll()
         transport.stop()
@@ -538,6 +589,8 @@ final class NetworkBridgeController: ObservableObject {
 
     /// Push-to-talk: solo se transmite mientras esté activo.
     func setTransmitting(_ transmitting: Bool) {
+        // En modo música automático, abrir el mic implica pasar a foco voz.
+        if transmitting { noteVoiceActivity() }
         audioIO.isTransmitting = transmitting
         DispatchQueue.main.async { self.isTransmitting = transmitting }
         log.debug(.bridge, "PTT \(transmitting ? "ON" : "OFF")")
@@ -639,6 +692,75 @@ final class NetworkBridgeController: ObservableObject {
             }
             try? self.audioIO.restart()
             self.refreshInputs()
+        }
+    }
+
+    // MARK: - Conmutador música / voz (modo autoMusicMode)
+
+    /// Marca que hubo actividad de voz (mi mic o audio entrante) y, si estamos
+    /// en música, cambia a modo voz. El temporizador se encarga de volver.
+    private func noteVoiceActivity() {
+        lastVoiceActivity = Date()
+        if autoMusicMode, audioFocus == .music {
+            switchFocus(to: .voice)
+        }
+    }
+
+    /// Arranca el temporizador que devuelve a música tras el silencio.
+    private func startFocusTimer() {
+        focusTimer?.invalidate()
+        guard autoMusicMode else { return }
+        let t = Timer(timeInterval: 0.3, repeats: true) { [weak self] _ in
+            guard let self, self.autoMusicMode, self.isRunning else { return }
+            // Si estoy en voz y ya pasó el hangover sin actividad, vuelvo a música.
+            if self.audioFocus == .voice,
+               !self.isTransmitting,
+               Date().timeIntervalSince(self.lastVoiceActivity) > self.voiceHangoverSeconds {
+                self.switchFocus(to: .music)
+            }
+        }
+        RunLoop.main.add(t, forMode: .common)
+        focusTimer = t
+    }
+
+    private func stopFocusTimer() {
+        focusTimer?.invalidate()
+        focusTimer = nil
+    }
+
+    /// Cambia la sesión de audio entre música (A2DP, sin mic) y voz (HFP, con mic).
+    private func switchFocus(to focus: AudioFocus) {
+        guard audioFocus != focus else { return }
+        audioFocus = focus
+        audioQueue.async { [weak self] in
+            guard let self else { return }
+            switch focus {
+            case .music:
+                self.configureSessionForMusic()
+                self.audioIO.stop()   // suelta el micrófono → música full por A2DP
+                self.log.info(.audioSession, "Foco: MÚSICA (A2DP, mic liberado)")
+            case .voice:
+                self.configureAudioSession()   // playAndRecord + HFP + duck
+                try? self.audioIO.start()
+                self.refreshInputs()
+                self.log.info(.audioSession, "Foco: VOZ (HFP, mic activo)")
+            }
+        }
+    }
+
+    /// Sesión en modo música: reproducción estéreo por A2DP/CarPlay, mezclando
+    /// con la música de otras apps, SIN micrófono. Usada en reposo (sin voz).
+    private func configureSessionForMusic() {
+        do {
+            try audioSession.setCategory(
+                .playback,
+                mode: .default,
+                options: [.mixWithOthers, .allowBluetoothA2DP]
+            )
+            try audioSession.setActive(true, options: [])
+            log.info(.audioSession, "AudioSession en modo música (A2DP estéreo)")
+        } catch {
+            log.error(.audioSession, "Error modo música: \(error.localizedDescription)")
         }
     }
 

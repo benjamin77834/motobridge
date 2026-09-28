@@ -44,6 +44,27 @@ class BridgeController(context: Context) {
     var opusEnabled by mutableStateOf(false)
         private set
 
+    /** Modo "Música + intercom automático": mientras nadie habla, se libera el
+     *  micrófono para que Spotify/CarPlay suene a todo volumen; al hablar tú o
+     *  llegar voz de un rider, se abre el intercom (la música baja) y al cesar
+     *  la voz vuelve la música. */
+    var autoMusicMode by mutableStateOf(prefs.getBoolean("autoMusicMode", false))
+        private set
+    fun updateAutoMusicMode(on: Boolean) {
+        if (autoMusicMode == on) return
+        autoMusicMode = on
+        prefs.edit().putBoolean("autoMusicMode", on).apply()
+        if (isRunning) { stop(); android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ start() }, 400) }
+    }
+
+    // Conmutador música/voz.
+    private enum class AudioFocusState { MUSIC, VOICE }
+    private var audioFocus = AudioFocusState.MUSIC
+    private var lastVoiceActivity = 0L
+    private val voiceHangoverMs = 1500L
+    private var focusHandler: android.os.Handler? = null
+    private var focusRunnable: Runnable? = null
+
     fun updateMicGain(v: Float) { micGain = v; audio.captureGain = v }
     fun updateSpeakerGain(v: Float) { speakerGain = v; audio.outputGain = v }
     fun updateNoiseGate(v: Float) { noiseGate = v; audio.gateThreshold = v }
@@ -112,8 +133,9 @@ class BridgeController(context: Context) {
         if (msg == null) { audio.playFrom(peerId, data); return }
         when (msg.type) {
             com.motobridge.android.net.VoiceChannel.PRIVATE ->
-                if (msg.targetId == myNameId) audio.playFrom(peerId, msg.audio)
+                if (msg.targetId == myNameId) { noteVoiceActivity(); audio.playFrom(peerId, msg.audio) }
             com.motobridge.android.net.VoiceChannel.ALARM -> {
+                noteVoiceActivity()
                 audio.playFrom(peerId, msg.audio)
                 val now = System.currentTimeMillis()
                 if (ttsReady && now - lastAlarmAnnounce > 4000) {
@@ -125,7 +147,7 @@ class BridgeController(context: Context) {
                     tts?.speak(text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "alarm-rx")
                 }
             }
-            else -> audio.playFrom(peerId, msg.audio) // grupo: siempre
+            else -> { noteVoiceActivity(); audio.playFrom(peerId, msg.audio) } // grupo: siempre
         }
     }
 
@@ -192,17 +214,68 @@ class BridgeController(context: Context) {
         if (isRunning) return
         isRunning = true
         detectAudioQuality()
-        audio.start()
         transport.start()
+        if (autoMusicMode) {
+            // Arrancar en reposo: micrófono liberado, música full. Se abre al hablar.
+            audioFocus = AudioFocusState.MUSIC
+            lastVoiceActivity = 0L
+            startFocusTimer()
+        } else {
+            audio.start()
+        }
     }
 
     fun stop() {
         if (!isRunning) return
         isRunning = false
+        stopFocusTimer()
+        audioFocus = AudioFocusState.MUSIC
         updateTransmitting(false)
         knownPeers = emptySet()
         transport.stop()
         audio.stop()
+    }
+
+    /** Registra actividad de voz (mi mic o audio entrante) y, si estábamos en
+     *  música, abre el intercom. */
+    private fun noteVoiceActivity() {
+        lastVoiceActivity = System.currentTimeMillis()
+        if (autoMusicMode && audioFocus == AudioFocusState.MUSIC) switchFocus(AudioFocusState.VOICE)
+    }
+
+    private fun startFocusTimer() {
+        stopFocusTimer()
+        if (!autoMusicMode) return
+        val h = android.os.Handler(android.os.Looper.getMainLooper())
+        focusHandler = h
+        val r = object : Runnable {
+            override fun run() {
+                if (autoMusicMode && isRunning &&
+                    audioFocus == AudioFocusState.VOICE && !isTransmitting &&
+                    System.currentTimeMillis() - lastVoiceActivity > voiceHangoverMs) {
+                    switchFocus(AudioFocusState.MUSIC)
+                }
+                if (isRunning) h.postDelayed(this, 300)
+            }
+        }
+        focusRunnable = r
+        h.postDelayed(r, 300)
+    }
+
+    private fun stopFocusTimer() {
+        focusRunnable?.let { focusHandler?.removeCallbacks(it) }
+        focusRunnable = null
+        focusHandler = null
+    }
+
+    /** Alterna entre música (mic liberado, Spotify full) y voz (intercom activo). */
+    private fun switchFocus(focus: AudioFocusState) {
+        if (audioFocus == focus) return
+        audioFocus = focus
+        when (focus) {
+            AudioFocusState.MUSIC -> audio.stop()   // libera mic → música full
+            AudioFocusState.VOICE -> audio.start()  // abre intercom → música baja (ducking del sistema)
+        }
     }
 
     /** Si true, al conectar un rider se abre el micrófono automáticamente
@@ -287,6 +360,8 @@ class BridgeController(context: Context) {
     }
 
     fun updateTransmitting(v: Boolean) {
+        // En modo música, abrir el mic implica pasar a foco voz (arranca audio).
+        if (v) noteVoiceActivity()
         isTransmitting = v
         audio.isTransmitting = v
     }

@@ -296,12 +296,22 @@ struct NetworkBridgeView: View {
 
     private var coexistCard: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Toggle(isOn: $controller.autoMusicMode) {
+                Text("Música + intercom automático 🎵")
+                    .font(.headline)
+            }
+            .tint(.green)
+            Text("Ideal para Spotify/CarPlay en la moto: la música suena a todo volumen por las bocinas y baja sola cuando alguien habla; al terminar, vuelve la música. El micrófono se libera mientras nadie habla. Desactiva el modo llamada.")
+                .font(.caption).foregroundStyle(.secondary)
+
+            Divider()
+
             Toggle(isOn: $controller.coexistWithOtherAudio) {
                 Text("No interrumpir música de la moto")
                     .font(.headline)
             }
             .tint(.green)
-            .disabled(controller.useCallKit)
+            .disabled(controller.useCallKit || controller.autoMusicMode)
             Text("Activado: la voz del intercom se suma sobre la música de CarPlay/Spotify sin pausarla (baja un poco al hablar).")
                 .font(.caption).foregroundStyle(.secondary)
 
@@ -312,6 +322,7 @@ struct NetworkBridgeView: View {
                     .font(.headline)
             }
             .tint(.blue)
+            .disabled(controller.autoMusicMode)
             Text("Recomendado (activado). iOS trata el bridge como una llamada real: así los comandos de voz de Siri siguen funcionando aunque estés conectado, y se activa el micrófono de intercoms como el FreedConn. No compatible con 'no interrumpir música'. Si el bridge está activo, se reinicia solo al cambiarlo.")
                 .font(.caption).foregroundStyle(.secondary)
         }
