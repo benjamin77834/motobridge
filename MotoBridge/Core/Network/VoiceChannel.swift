@@ -13,6 +13,7 @@ enum VoiceChannelType: UInt8 {
     case group = 0
     case privateWhisper = 1   // solo llega al destinatario; tú sigues oyendo al grupo
     case alarm = 2            // emergencia: todos lo reproducen con prioridad
+    case text = 3             // mensaje escrito: el receptor lo lee por voz (TTS)
 }
 
 enum VoiceChannel {

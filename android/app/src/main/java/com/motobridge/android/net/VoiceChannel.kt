@@ -10,6 +10,7 @@ object VoiceChannel {
     const val GROUP: Byte = 0
     const val PRIVATE: Byte = 1
     const val ALARM: Byte = 2
+    const val TEXT: Byte = 3   // mensaje escrito: el receptor lo lee por voz (TTS)
 
     fun wrap(audio: ByteArray, type: Byte, targetId: Int): ByteArray {
         val out = ByteArray(HEADER + audio.size)

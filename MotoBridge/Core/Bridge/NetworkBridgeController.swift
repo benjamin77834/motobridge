@@ -450,6 +450,26 @@ final class NetworkBridgeController: ObservableObject {
         log.info(.bridge, "De vuelta al grupo")
     }
 
+    /// Envía un mensaje ESCRITO que el receptor leerá por voz (TTS) en su casco.
+    ///  - text: el texto a leer.
+    ///  - privateTo: nombre del rider destinatario; nil = a todo el grupo.
+    /// Viaja por el transporte igual que el audio, con cabecera de canal texto.
+    func sendTextMessage(_ text: String, privateTo peerName: String? = nil) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isRunning, !clean.isEmpty else { return }
+        let target = peerName != nil ? NetworkBridgeController.idFor(name: peerName!) : 0
+        guard let payload = clean.data(using: .utf8) else { return }
+        let channeled = VoiceChannel.wrap(payload, type: .text, targetId: target)
+        let toSend = meshEnabled ? mesh.wrapOutgoing(channeled) : channeled
+        transport.sendAudio(toSend)
+        // Confirmación local por voz de que se envió.
+        let who = peerName != nil ? "a \(peerName!)" : "al grupo"
+        let u = AVSpeechUtterance(string: "Mensaje enviado \(who)")
+        u.voice = AVSpeechSynthesisVoice(language: "es-MX")
+        DispatchQueue.main.async { self.speech.speak(u) }
+        log.info(.bridge, "Mensaje de texto enviado (\(who)): \(clean)")
+    }
+
     /// ¿Está transmitiendo una alarma ahora?
     @Published private(set) var alarmActive = false
 
@@ -560,6 +580,17 @@ final class NetworkBridgeController: ObservableObject {
                 u.voice = AVSpeechSynthesisVoice(language: "es-MX")
                 DispatchQueue.main.async { self.speech.speak(u) }
             }
+        case .text:
+            // Mensaje escrito: si es privado (targetId != 0) solo lo leo si es
+            // para mí; si es 0, es para todo el grupo. Se lee por voz (TTS).
+            if msg.targetId != 0, msg.targetId != myNameId { break }
+            guard let text = String(data: msg.audio, encoding: .utf8), !text.isEmpty else { break }
+            let who = nameForId(msg.targetId)   // "" si es al grupo
+            let prefix = msg.targetId == 0 ? "Mensaje del grupo. " : "Mensaje privado. "
+            let u = AVSpeechUtterance(string: prefix + text)
+            u.voice = AVSpeechSynthesisVoice(language: "es-MX")
+            DispatchQueue.main.async { self.speech.speak(u) }
+            log.info(.bridge, "Mensaje de texto recibido (de \(who.isEmpty ? "grupo" : who)): \(text)")
         }
         DispatchQueue.main.async { self.packetsReceived += 1 }
     }

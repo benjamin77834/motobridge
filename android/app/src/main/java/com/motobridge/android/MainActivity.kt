@@ -256,6 +256,40 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
         }
     }
 
+    // Mensaje escrito → leído por voz en el casco
+    var messageField by remember { mutableStateOf("") }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("MENSAJE ESCRITO", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
+            OutlinedTextField(
+                value = messageField,
+                onValueChange = { messageField = it },
+                placeholder = { Text("Escribe un mensaje…") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 3
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = { controller.sendTextMessage(messageField); messageField = "" },
+                    enabled = controller.isRunning && messageField.isNotBlank(),
+                    modifier = Modifier.weight(1f).height(44.dp)
+                ) { Text("📢 A todos", fontWeight = FontWeight.Bold) }
+                Button(
+                    onClick = {
+                        controller.privatePeerName?.let { controller.sendTextMessage(messageField, it); messageField = "" }
+                    },
+                    enabled = controller.isRunning && messageField.isNotBlank() && controller.privatePeerName != null,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7E57C2)),
+                    modifier = Modifier.weight(1f).height(44.dp)
+                ) { Text("🔒 Privado", fontWeight = FontWeight.Bold, color = Color.White) }
+            }
+            Text(if (controller.privatePeerName == null)
+                    "Se lee por voz en el casco de todos. Para privado, elige un rider en el canal privado."
+                 else "«Privado» lo lee solo ${controller.privatePeerName}.",
+                 fontSize = 11.sp, color = Color.Gray)
+        }
+    }
+
     // Emergencia
     Button(
         onClick = { controller.sendAlarm() },

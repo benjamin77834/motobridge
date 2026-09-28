@@ -216,6 +216,15 @@ class BridgeController(context: Context) {
                     tts?.speak(text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "alarm-rx")
                 }
             }
+            com.motobridge.android.net.VoiceChannel.TEXT -> {
+                // Mensaje escrito: privado solo si es para mí; 0 = grupo. Se lee por TTS.
+                if (msg.targetId != 0 && msg.targetId != myNameId) return
+                val text = String(msg.audio, Charsets.UTF_8)
+                if (text.isNotEmpty() && ttsReady) {
+                    val prefix = if (msg.targetId == 0) "Mensaje del grupo. " else "Mensaje privado. "
+                    tts?.speak(prefix + text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "txt-rx")
+                }
+            }
             else -> { noteVoiceActivity(); audio.playFrom(peerId, msg.audio) } // grupo: siempre
         }
     }
@@ -402,6 +411,20 @@ class BridgeController(context: Context) {
         channelType = com.motobridge.android.net.VoiceChannel.GROUP
         privatePeerName = null
         privateTargetId = 0
+    }
+
+    /** Envía un mensaje ESCRITO que el receptor leerá por voz (TTS).
+     *  privateTo = nombre del rider (null = a todo el grupo). */
+    fun sendTextMessage(text: String, privateTo: String? = null) {
+        val clean = text.trim()
+        if (!isRunning || clean.isEmpty()) return
+        val target = if (privateTo != null) com.motobridge.android.net.VoiceChannel.idFor(privateTo) else 0
+        val payload = clean.toByteArray(Charsets.UTF_8)
+        val channeled = com.motobridge.android.net.VoiceChannel.wrap(payload, com.motobridge.android.net.VoiceChannel.TEXT, target)
+        val toSend = if (meshEnabled) mesh.wrapOutgoing(channeled) else channeled
+        transport.sendAudio(toSend, toSend.size)
+        val who = if (privateTo != null) "a $privateTo" else "al grupo"
+        if (ttsReady) tts?.speak("Mensaje enviado $who", android.speech.tts.TextToSpeech.QUEUE_ADD, null, "txt-tx")
     }
 
     var alarmActive by mutableStateOf(false)

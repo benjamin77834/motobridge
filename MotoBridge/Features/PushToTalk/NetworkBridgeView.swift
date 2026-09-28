@@ -8,6 +8,7 @@ struct NetworkBridgeView: View {
     @State private var riderNameField = UserDefaults.standard.string(forKey: "riderName") ?? ""
 
     @State private var showSettings = false
+    @State private var messageField = ""
 
     var body: some View {
         ScrollView {
@@ -16,6 +17,7 @@ struct NetworkBridgeView: View {
                 statusCard          // estado + iniciar/detener
                 outputCard          // switch Cascos <-> Bocinas (arriba, fácil alcance)
                 pttCard             // botón de hablar + manos libres
+                messageCard         // mensaje escrito leído por voz
                 quickChannelCard    // privado rápido + volver al grupo
                 alarmCard           // emergencia
                 settingsButton      // abre Configuración (todo lo demás)
@@ -322,6 +324,51 @@ struct NetworkBridgeView: View {
         }
         .cardStyle()
         .onAppear { controller.refreshMusicState() }
+    }
+
+    // Mensaje escrito → el casco del destinatario lo lee por voz (TTS).
+    private var messageCard: some View {
+        VStack(spacing: 8) {
+            Text("MENSAJE ESCRITO").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            TextField("Escribe un mensaje…", text: $messageField, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(1...3)
+            HStack(spacing: 10) {
+                Button {
+                    controller.sendTextMessage(messageField)
+                    messageField = ""
+                } label: {
+                    Label("A todos", systemImage: "megaphone.fill")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
+
+                Button {
+                    if let peer = controller.privatePeerName {
+                        controller.sendTextMessage(messageField, privateTo: peer)
+                        messageField = ""
+                    }
+                } label: {
+                    Label("Privado", systemImage: "lock.fill")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.purple)
+                .disabled(controller.privatePeerName == nil)
+            }
+            .disabled(!controller.isRunning || messageField.trimmingCharacters(in: .whitespaces).isEmpty)
+
+            Text(controller.privatePeerName == nil
+                 ? "Se lee por voz en el casco de todos. Para privado, elige un rider en el canal privado."
+                 : "«Privado» lo lee solo \(controller.privatePeerName!).")
+                .font(.caption2).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .cardStyle()
     }
 
     private var alarmCard: some View {
