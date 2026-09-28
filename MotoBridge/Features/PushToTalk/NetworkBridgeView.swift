@@ -15,6 +15,7 @@ struct NetworkBridgeView: View {
                 // PANTALLA PRINCIPAL SIMPLE (uso en moto):
                 statusCard          // estado + iniciar/detener
                 pttCard             // botón grande de hablar + manos libres
+                outputCard          // switch Cascos <-> Bocinas
                 quickChannelCard    // privado rápido + volver al grupo
                 alarmCard           // emergencia
                 settingsButton      // abre Configuración (todo lo demás)
@@ -271,6 +272,42 @@ struct NetworkBridgeView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .cardStyle()
+    }
+
+    // Switch de salida: Cascos (intercom) <-> Bocinas (música de la moto).
+    private var outputCard: some View {
+        VStack(spacing: 8) {
+            Text("SALIDA DE AUDIO").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                Button {
+                    controller.setOutput(.headset)
+                } label: {
+                    Label("Cascos", systemImage: "headphones")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(controller.outputTarget == .headset ? .green : .gray)
+
+                Button {
+                    controller.setOutput(.speakers)
+                } label: {
+                    Label("Bocinas", systemImage: "speaker.wave.2.fill")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(controller.outputTarget == .speakers ? .green : .gray)
+            }
+            .disabled(!controller.isRunning || controller.autoMusicMode)
+
+            Text(controller.autoMusicMode
+                 ? "En modo automático la salida cambia sola al hablar."
+                 : "Cascos = intercom con micrófono. Bocinas = música de la moto (CarPlay). También los botones ◀◀/▶▶ del intercom cambian la salida.")
+                .font(.caption2).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
         .cardStyle()
     }
 

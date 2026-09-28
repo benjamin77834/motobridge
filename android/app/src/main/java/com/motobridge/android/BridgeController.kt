@@ -57,6 +57,21 @@ class BridgeController(context: Context) {
         if (isRunning) { stop(); android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ start() }, 400) }
     }
 
+    /** Destino de salida elegido manualmente: cascos (intercom) o bocinas (música). */
+    var outputTarget by mutableStateOf(prefs.getString("outputTarget", "headset") ?: "headset")
+        private set
+
+    /** Cambia la salida. Bocinas = libera mic (música por A2DP). Cascos = intercom. */
+    fun setOutput(target: String) {
+        if (outputTarget == target) return
+        outputTarget = target
+        prefs.edit().putString("outputTarget", target).apply()
+        if (!isRunning || autoMusicMode) return
+        if (target == "speakers") audio.stop() else audio.start()
+    }
+
+    fun toggleOutput() { setOutput(if (outputTarget == "headset") "speakers" else "headset") }
+
     // Conmutador música/voz.
     private enum class AudioFocusState { MUSIC, VOICE }
     private var audioFocus = AudioFocusState.MUSIC
@@ -220,20 +235,38 @@ class BridgeController(context: Context) {
             audioFocus = AudioFocusState.MUSIC
             lastVoiceActivity = 0L
             startFocusTimer()
+        } else if (outputTarget == "speakers") {
+            // Salida a bocinas: no capturar mic, deja que la música suene por A2DP.
         } else {
             audio.start()
         }
+        remote.start()
     }
 
     fun stop() {
         if (!isRunning) return
         isRunning = false
+        remote.stop()
         stopFocusTimer()
         audioFocus = AudioFocusState.MUSIC
         updateTransmitting(false)
         knownPeers = emptySet()
         transport.stop()
         audio.stop()
+    }
+
+    /** Lee los botones multimedia del intercom (Hysnox) vía MediaSession:
+     *  play/pause = hablar (toggle), next = bocinas, previous = cascos. */
+    private val remote by lazy {
+        com.motobridge.android.net.RemoteControlManager(appContext).apply {
+            onToggle = {
+                if (isRunning) android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    updateTransmitting(!isTransmitting)
+                }
+            }
+            onNext = { android.os.Handler(android.os.Looper.getMainLooper()).post { setOutput("speakers") } }
+            onPrevious = { android.os.Handler(android.os.Looper.getMainLooper()).post { setOutput("headset") } }
+        }
     }
 
     /** Registra actividad de voz (mi mic o audio entrante) y, si estábamos en

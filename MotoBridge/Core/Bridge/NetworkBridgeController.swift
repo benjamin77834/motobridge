@@ -140,6 +140,42 @@ final class NetworkBridgeController: ObservableObject {
         }
     }
 
+    /// Destino de salida elegido manualmente por el rider.
+    ///  - headset: cascos / intercom (HFP, con micrófono para hablar).
+    ///  - speakers: bocinas de la moto / CarPlay (A2DP estéreo, sin micrófono).
+    /// Es el switch "Cascos ↔ Bocinas". No aplica en modo automático.
+    enum OutputTarget: String { case headset, speakers }
+    @Published private(set) var outputTarget: OutputTarget =
+        OutputTarget(rawValue: UserDefaults.standard.string(forKey: "outputTarget") ?? "") ?? .headset
+
+    /// Cambia el destino de salida (switch manual Cascos ↔ Bocinas).
+    /// En bocinas: música por CarPlay/A2DP y se suelta el micrófono.
+    /// En cascos: intercom por HFP con micrófono abierto para hablar.
+    func setOutput(_ target: OutputTarget) {
+        guard outputTarget != target else { return }
+        outputTarget = target
+        UserDefaults.standard.set(target.rawValue, forKey: "outputTarget")
+        log.info(.audioRoute, "Salida elegida: \(target.rawValue)")
+        guard isRunning, !autoMusicMode else { return }
+        audioQueue.async { [weak self] in
+            guard let self else { return }
+            switch target {
+            case .speakers:
+                self.configureSessionForMusic()
+                self.audioIO.stop()   // libera mic → música por bocinas
+            case .headset:
+                self.configureAudioSession()
+                try? self.audioIO.start()
+                self.refreshInputs()
+            }
+        }
+    }
+
+    /// Alterna entre cascos y bocinas (para el botón del intercom / switch).
+    func toggleOutput() {
+        setOutput(outputTarget == .headset ? .speakers : .headset)
+    }
+
     /// Estado interno del conmutador música/voz.
     private enum AudioFocus { case music, voice }
     private var audioFocus: AudioFocus = .music
@@ -220,10 +256,34 @@ final class NetworkBridgeController: ObservableObject {
             DispatchQueue.main.async { self?.stop() }
         }
 
+        // Botones del intercom (Hysnox) → acciones del bridge.
+        // Botón central (play/pause): hablar (PTT toggle).
+        remoteControl.onTogglePressed = { [weak self] in
+            guard let self, self.isRunning else { return }
+            DispatchQueue.main.async { self.setTransmitting(!self.isTransmitting) }
+        }
+        // Siguiente (▶▶): salida a las bocinas de la moto.
+        remoteControl.onNextPressed = { [weak self] in
+            DispatchQueue.main.async { self?.setOutput(.speakers) }
+        }
+        // Anterior (◀◀): salida a los cascos / intercom.
+        remoteControl.onPreviousPressed = { [weak self] in
+            DispatchQueue.main.async { self?.setOutput(.headset) }
+        }
+
         // Aplicar calidad por defecto (Opus) y pedir permiso de notificaciones.
+        // Se omite la petición al capturar screenshots para las tiendas (evita
+        // que el diálogo del sistema tape la pantalla).
         audioIO.opusEnabled = opusEnabled
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        let skipPrompts = ProcessInfo.processInfo.environment["MB_SCREENSHOTS"] != nil
+            || CommandLine.arguments.contains("-MBScreenshots")
+        if !skipPrompts {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        }
     }
+
+    /// Lee los botones del intercom (Hysnox) vía control remoto multimedia.
+    private let remoteControl = RemoteControlManager()
 
     private let speech = AVSpeechSynthesizer()
     private var lastAlarmAnnounce = Date.distantPast
@@ -444,6 +504,7 @@ final class NetworkBridgeController: ObservableObject {
         isRunning = true
         // El descubrimiento de red arranca de inmediato (barato y seguro en main).
         transport.start()
+        remoteControl.start()   // escuchar botones del intercom (Hysnox)
         log.info(.bridge, "NetworkBridge iniciado (\(mode.rawValue))")
 
         // Modo CallKit: el audio lo arranca el sistema en onActivateAudio.
@@ -471,6 +532,13 @@ final class NetworkBridgeController: ObservableObject {
         // El audio se configura en background para no colgar la UI.
         audioQueue.async { [weak self] in
             guard let self else { return }
+            // Respetar el switch de salida: si el rider eligió bocinas, arrancar
+            // en modo música (A2DP, sin mic). Si eligió cascos, intercom HFP.
+            if self.outputTarget == .speakers {
+                self.configureSessionForMusic()
+                self.log.info(.audioSession, "Arranque en BOCINAS (A2DP, sin mic)")
+                return
+            }
             self.configureAudioSession()
             do {
                 try self.audioIO.start()
@@ -566,6 +634,7 @@ final class NetworkBridgeController: ObservableObject {
     func stop() {
         guard isRunning else { return }
         isRunning = false
+        remoteControl.stop()
         stopFocusTimer()
         audioFocus = .music
         setTransmitting(false)

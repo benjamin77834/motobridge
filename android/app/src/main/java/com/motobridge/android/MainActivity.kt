@@ -223,6 +223,32 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
         }
     }
 
+    // Salida de audio: Cascos <-> Bocinas
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("SALIDA DE AUDIO", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = { controller.setOutput("headset") },
+                    enabled = controller.isRunning && !controller.autoMusicMode,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (controller.outputTarget == "headset") Color(0xFF34C759) else Color.Gray),
+                    modifier = Modifier.weight(1f).height(48.dp)
+                ) { Text("🎧 Cascos", fontWeight = FontWeight.Bold) }
+                Button(
+                    onClick = { controller.setOutput("speakers") },
+                    enabled = controller.isRunning && !controller.autoMusicMode,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (controller.outputTarget == "speakers") Color(0xFF34C759) else Color.Gray),
+                    modifier = Modifier.weight(1f).height(48.dp)
+                ) { Text("🔊 Bocinas", fontWeight = FontWeight.Bold) }
+            }
+            Text(if (controller.autoMusicMode) "En modo automático la salida cambia sola al hablar."
+                 else "Cascos = intercom. Bocinas = música (CarPlay). Botones ◀◀/▶▶ del intercom también cambian la salida.",
+                 fontSize = 11.sp, color = Color.Gray)
+        }
+    }
+
     // Emergencia
     Button(
         onClick = { controller.sendAlarm() },
