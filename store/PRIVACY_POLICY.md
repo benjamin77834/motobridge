@@ -27,7 +27,7 @@ La app no está dirigida a menores de 13 años y no recopila datos de ellos.
 Podemos actualizar esta política. La versión vigente estará siempre disponible en esta URL.
 
 ## Contacto
-Para dudas sobre esta política, escríbenos a: (tu correo de contacto)
+Para dudas sobre esta política, escríbenos a: benjamin@monkeyphone.net
 
 ---
-_Nota: Sustituye "(tu correo de contacto)" por un correo real antes de publicar. Esta política debe alojarse en una URL pública y esa URL se registra en Google Play Console._
+_Nota: Sustituye "benjamin@monkeyphone.net" por un correo real antes de publicar. Esta política debe alojarse en una URL pública y esa URL se registra en Google Play Console._

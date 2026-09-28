@@ -10,7 +10,7 @@ Google Play EXIGE una URL pública con tu política de privacidad. Aquí tienes 
 2. Clic en **+ (Crear sitio en blanco)**.
 3. Ponle nombre al sitio: **Mono Bridge**.
 4. En la página, borra el texto de ejemplo y pega el contenido de abajo (sección "TEXTO PARA PEGAR").
-5. **IMPORTANTE:** cambia `TU_CORREO@ejemplo.com` por tu correo real.
+5. **IMPORTANTE:** cambia `benjamin@monkeyphone.net` por tu correo real.
 6. Arriba a la derecha, clic en **Publicar**.
 7. Te pedirá una dirección web, por ejemplo: `mono-bridge-privacidad`.
    - Tu URL final será algo como: `https://sites.google.com/view/mono-bridge-privacidad`
@@ -60,7 +60,7 @@ La app no está dirigida a menores de 13 años y no recopila datos de ellos.
 Podemos actualizar esta política. La versión vigente estará siempre disponible en esta URL.
 
 **Contacto**
-Para dudas sobre esta política, escríbenos a: TU_CORREO@ejemplo.com
+Para dudas sobre esta política, escríbenos a: benjamin@monkeyphone.net
 
 ---
 
