@@ -205,19 +205,57 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
     if (peers.isNotEmpty()) {
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Privado", fontWeight = FontWeight.Bold)
-                controller.privatePeerName?.let {
+                Text("Canal", fontWeight = FontWeight.Bold)
+                val activeSg = controller.activeSubgroupName
+                val privName = controller.privatePeerName
+                if (privName != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🔒 Con $it", Modifier.weight(1f), color = Color(0xFFFFA000))
+                        Text("🔒 Con $privName", Modifier.weight(1f), color = Color(0xFFFFA000))
                         Button(onClick = { controller.backToGroup() }) { Text("Grupo") }
                     }
-                } ?: run {
+                } else if (activeSg != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("👥 Grupo $activeSg", Modifier.weight(1f), color = Color(0xFF7E57C2))
+                        Button(onClick = { controller.backToGroup() }) { Text("Grupo") }
+                    }
+                } else {
                     for (p in peers) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(p, Modifier.weight(1f))
                             OutlinedButton(onClick = { controller.startPrivate(p) }) { Text("Privado") }
                         }
                     }
+                    // Subgrupos guardados
+                    if (controller.subgroups.isNotEmpty()) {
+                        Text("Grupos privados:", fontSize = 12.sp, color = Color.Gray)
+                        for (sg in controller.subgroups) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("👥 ${sg.name} (${sg.members.size})", Modifier.weight(1f))
+                                OutlinedButton(onClick = { controller.startSubgroup(sg.name) }) { Text("Hablar") }
+                                TextButton(onClick = { controller.deleteSubgroup(sg.name) }) { Text("🗑") }
+                            }
+                        }
+                    }
+                    // Crear subgrupo
+                    var sgName by remember { mutableStateOf("") }
+                    val sgMembers = remember { mutableStateListOf<String>() }
+                    Divider()
+                    Text("Nuevo grupo privado:", fontSize = 12.sp, color = Color.Gray)
+                    OutlinedTextField(value = sgName, onValueChange = { sgName = it },
+                        placeholder = { Text("Nombre (ej. Adelante)") }, modifier = Modifier.fillMaxWidth())
+                    for (p in peers) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = sgMembers.contains(p), onCheckedChange = {
+                                if (it) sgMembers.add(p) else sgMembers.remove(p)
+                            })
+                            Text(p)
+                        }
+                    }
+                    Button(
+                        onClick = { controller.saveSubgroup(sgName, sgMembers.toList()); sgName = ""; sgMembers.clear() },
+                        enabled = sgName.isNotBlank() && sgMembers.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Guardar grupo privado") }
                 }
             }
         }
@@ -276,16 +314,25 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
                 ) { Text("📢 A todos", fontWeight = FontWeight.Bold) }
                 Button(
                     onClick = {
-                        controller.privatePeerName?.let { controller.sendTextMessage(messageField, it); messageField = "" }
+                        val priv = controller.privatePeerName
+                        val sg = controller.activeSubgroupName
+                        when {
+                            priv != null -> { controller.sendTextMessage(messageField, priv); messageField = "" }
+                            sg != null -> { controller.sendTextToSubgroup(messageField, sg); messageField = "" }
+                        }
                     },
-                    enabled = controller.isRunning && messageField.isNotBlank() && controller.privatePeerName != null,
+                    enabled = controller.isRunning && messageField.isNotBlank() &&
+                        (controller.privatePeerName != null || controller.activeSubgroupName != null),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7E57C2)),
                     modifier = Modifier.weight(1f).height(44.dp)
-                ) { Text("🔒 Privado", fontWeight = FontWeight.Bold, color = Color.White) }
+                ) { Text(if (controller.activeSubgroupName != null) "👥 Al grupo" else "🔒 Privado",
+                         fontWeight = FontWeight.Bold, color = Color.White) }
             }
-            Text(if (controller.privatePeerName == null)
-                    "Se lee por voz en el casco de todos. Para privado, elige un rider en el canal privado."
-                 else "«Privado» lo lee solo ${controller.privatePeerName}.",
+            Text(when {
+                    controller.privatePeerName != null -> "«Privado» lo lee solo ${controller.privatePeerName}."
+                    controller.activeSubgroupName != null -> "«Al grupo» lo lee el grupo ${controller.activeSubgroupName}."
+                    else -> "Se lee por voz en el casco de todos. Para dirigirlo, elige un rider o grupo en Canal."
+                 },
                  fontSize = 11.sp, color = Color.Gray)
         }
     }

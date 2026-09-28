@@ -317,8 +317,14 @@ final class NetworkBridgeController: ObservableObject {
             guard let self else { return }
             // En alarma, el targetId transporta MI id de nombre para que los
             // demás sepan quién pide ayuda. En privado, el id del destinatario.
-            let target = self.channelType == .alarm ? self.myNameId : self.privateTargetId
-            let channeled = VoiceChannel.wrap(data, type: self.channelType, targetId: target)
+            let channeled: Data
+            if self.channelType == .subgroup, !self.activeSubgroupTargets.isEmpty {
+                // Voz dirigida a un subgrupo de riders elegidos.
+                channeled = VoiceChannel.wrapSubgroup(data, targets: self.activeSubgroupTargets, isText: false)
+            } else {
+                let target = self.channelType == .alarm ? self.myNameId : self.privateTargetId
+                channeled = VoiceChannel.wrap(data, type: self.channelType, targetId: target)
+            }
             let toSend = self.meshEnabled ? self.mesh.wrapOutgoing(channeled) : channeled
             self.transport.sendAudio(toSend)
             DispatchQueue.main.async {
@@ -433,21 +439,99 @@ final class NetworkBridgeController: ObservableObject {
         return ""
     }
 
+    // MARK: - Subgrupos (varios riders elegidos)
+
+    /// Un subgrupo con nombre y la lista de riders que lo forman.
+    struct Subgroup: Identifiable, Codable, Hashable {
+        var id: String { name }
+        var name: String
+        var members: [String]   // nombres de riders
+    }
+
+    /// Subgrupos guardados por el usuario (persisten).
+    @Published private(set) var subgroups: [Subgroup] = NetworkBridgeController.loadSubgroups()
+    /// Subgrupo activo para hablar por voz (nil = no dirigido a subgrupo).
+    @Published private(set) var activeSubgroupName: String?
+    /// nameIds de los miembros del subgrupo activo (para envоlver el audio).
+    private var activeSubgroupTargets: [UInt32] = []
+
+    private static func loadSubgroups() -> [Subgroup] {
+        guard let data = UserDefaults.standard.data(forKey: "subgroups"),
+              let list = try? JSONDecoder().decode([Subgroup].self, from: data) else { return [] }
+        return list
+    }
+    private func saveSubgroups() {
+        if let data = try? JSONEncoder().encode(subgroups) {
+            UserDefaults.standard.set(data, forKey: "subgroups")
+        }
+    }
+
+    /// Crea o actualiza un subgrupo.
+    func saveSubgroup(name: String, members: [String]) {
+        let clean = name.trimmingCharacters(in: .whitespaces)
+        guard !clean.isEmpty, !members.isEmpty else { return }
+        if let idx = subgroups.firstIndex(where: { $0.name == clean }) {
+            subgroups[idx].members = members
+        } else {
+            subgroups.append(Subgroup(name: clean, members: members))
+        }
+        saveSubgroups()
+        log.info(.bridge, "Subgrupo guardado: \(clean) (\(members.count) riders)")
+    }
+
+    /// Elimina un subgrupo.
+    func deleteSubgroup(name: String) {
+        subgroups.removeAll { $0.name == name }
+        if activeSubgroupName == name { backToGroup() }
+        saveSubgroups()
+    }
+
+    /// Activa hablar por voz hacia un subgrupo: tu voz solo llega a esos riders.
+    func startSubgroup(_ name: String) {
+        guard let sg = subgroups.first(where: { $0.name == name }) else { return }
+        activeSubgroupTargets = sg.members.map { NetworkBridgeController.idFor(name: $0) }
+        activeSubgroupName = name
+        privatePeerName = nil
+        privateTargetId = 0
+        channelType = .subgroup
+        log.info(.bridge, "Hablando al subgrupo \(name): \(sg.members.joined(separator: ", "))")
+    }
+
     /// Activa canal privado (susurro) con un rider: tu voz solo le llega a él,
     /// pero tú sigues oyendo al grupo (modo b).
     func startPrivate(with peerName: String) {
         privateTargetId = NetworkBridgeController.idFor(name: peerName)
         privatePeerName = peerName
+        activeSubgroupName = nil
+        activeSubgroupTargets = []
         channelType = .privateWhisper
         log.info(.bridge, "Canal privado con \(peerName)")
     }
 
-    /// Vuelve al grupo (deja de susurrar).
+    /// Vuelve al grupo (deja de susurrar / de hablar al subgrupo).
     func backToGroup() {
         channelType = .group
         privatePeerName = nil
         privateTargetId = 0
+        activeSubgroupName = nil
+        activeSubgroupTargets = []
         log.info(.bridge, "De vuelta al grupo")
+    }
+
+    /// Envía un mensaje de texto a un subgrupo (todos sus miembros lo leen por voz).
+    func sendTextToSubgroup(_ text: String, subgroup name: String) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isRunning, !clean.isEmpty,
+              let sg = subgroups.first(where: { $0.name == name }),
+              let payload = clean.data(using: .utf8) else { return }
+        let targets = sg.members.map { NetworkBridgeController.idFor(name: $0) }
+        let channeled = VoiceChannel.wrapSubgroup(payload, targets: targets, isText: true)
+        let toSend = meshEnabled ? mesh.wrapOutgoing(channeled) : channeled
+        transport.sendAudio(toSend)
+        let u = AVSpeechUtterance(string: "Mensaje enviado al grupo \(name)")
+        u.voice = AVSpeechSynthesisVoice(language: "es-MX")
+        DispatchQueue.main.async { self.speech.speak(u) }
+        log.info(.bridge, "Texto a subgrupo \(name): \(clean)")
     }
 
     /// Envía un mensaje ESCRITO que el receptor leerá por voz (TTS) en su casco.
@@ -591,6 +675,19 @@ final class NetworkBridgeController: ObservableObject {
             u.voice = AVSpeechSynthesisVoice(language: "es-MX")
             DispatchQueue.main.async { self.speech.speak(u) }
             log.info(.bridge, "Mensaje de texto recibido (de \(who.isEmpty ? "grupo" : who)): \(text)")
+        case .subgroup:
+            // Subgrupo: solo proceso si mi nameId está en la lista de destinatarios.
+            guard msg.targets.contains(myNameId) else { break }
+            if msg.isText {
+                guard let text = String(data: msg.audio, encoding: .utf8), !text.isEmpty else { break }
+                let u = AVSpeechUtterance(string: "Mensaje de grupo privado. " + text)
+                u.voice = AVSpeechSynthesisVoice(language: "es-MX")
+                DispatchQueue.main.async { self.speech.speak(u) }
+                log.info(.bridge, "Texto de subgrupo recibido: \(text)")
+            } else {
+                noteVoiceActivity()
+                audioIO.playReceivedAudio(msg.audio)
+            }
         }
         DispatchQueue.main.async { self.packetsReceived += 1 }
     }

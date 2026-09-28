@@ -9,6 +9,7 @@ struct NetworkBridgeView: View {
 
     @State private var showSettings = false
     @State private var messageField = ""
+    @State private var showSubgroups = false
 
     var body: some View {
         ScrollView {
@@ -110,6 +111,14 @@ struct NetworkBridgeView: View {
                     Button("Volver al grupo") { controller.backToGroup() }
                         .buttonStyle(.borderedProminent).tint(.orange)
                 }
+            } else if let sg = controller.activeSubgroupName {
+                HStack {
+                    Image(systemName: "person.3.fill").foregroundStyle(.purple)
+                    Text("Hablando al grupo \(sg)").font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Button("Volver al grupo") { controller.backToGroup() }
+                        .buttonStyle(.borderedProminent).tint(.purple)
+                }
             } else {
                 Text("Toca un rider para hablar en privado (sigues oyendo al grupo):")
                     .font(.caption).foregroundStyle(.secondary)
@@ -126,10 +135,41 @@ struct NetworkBridgeView: View {
                     }
                     .buttonStyle(.bordered)
                 }
+
+                // Subgrupos guardados: hablar a varios riders a la vez.
+                if !controller.subgroups.isEmpty {
+                    Divider()
+                    Text("Grupos privados:").font(.caption).foregroundStyle(.secondary)
+                    ForEach(controller.subgroups) { sg in
+                        Button {
+                            controller.startSubgroup(sg.name)
+                        } label: {
+                            HStack {
+                                Image(systemName: "person.3").foregroundStyle(.purple)
+                                Text(sg.name)
+                                Spacer()
+                                Text("\(sg.members.count) riders").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+
+                Button {
+                    showSubgroups = true
+                } label: {
+                    Label("Gestionar grupos privados", systemImage: "person.3.sequence.fill")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .padding(.top, 4)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardStyle()
+        .sheet(isPresented: $showSubgroups) {
+            SubgroupEditor(controller: controller)
+        }
     }
 
     private var statusColor: Color {
@@ -350,21 +390,27 @@ struct NetworkBridgeView: View {
                     if let peer = controller.privatePeerName {
                         controller.sendTextMessage(messageField, privateTo: peer)
                         messageField = ""
+                    } else if let sg = controller.activeSubgroupName {
+                        controller.sendTextToSubgroup(messageField, subgroup: sg)
+                        messageField = ""
                     }
                 } label: {
-                    Label("Privado", systemImage: "lock.fill")
+                    Label(controller.activeSubgroupName != nil ? "Al grupo priv." : "Privado",
+                          systemImage: controller.activeSubgroupName != nil ? "person.3.fill" : "lock.fill")
                         .font(.subheadline.weight(.bold))
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.purple)
-                .disabled(controller.privatePeerName == nil)
+                .disabled(controller.privatePeerName == nil && controller.activeSubgroupName == nil)
             }
             .disabled(!controller.isRunning || messageField.trimmingCharacters(in: .whitespaces).isEmpty)
 
-            Text(controller.privatePeerName == nil
-                 ? "Se lee por voz en el casco de todos. Para privado, elige un rider en el canal privado."
-                 : "«Privado» lo lee solo \(controller.privatePeerName!).")
+            Text({
+                if let p = controller.privatePeerName { return "«Privado» lo lee solo \(p)." }
+                if let s = controller.activeSubgroupName { return "«Al grupo priv.» lo lee el grupo \(s)." }
+                return "Se lee por voz en el casco de todos. Para dirigirlo, elige un rider o grupo privado en Canal."
+            }())
                 .font(.caption2).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -769,4 +815,73 @@ struct NetworkBridgeView: View {
         NetworkBridgeView()
     }
     .preferredColorScheme(.dark)
+}
+
+/// Editor de grupos privados (subgrupos): crear con nombre + miembros elegidos,
+/// y borrar los existentes.
+struct SubgroupEditor: View {
+    @ObservedObject var controller: NetworkBridgeController
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name = ""
+    @State private var selected = Set<String>()
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Nuevo grupo") {
+                    TextField("Nombre del grupo (ej. Adelante)", text: $name)
+                    if controller.connectedPeers.isEmpty {
+                        Text("Conéctate con riders para elegir miembros.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(controller.connectedPeers) { peer in
+                            Button {
+                                if selected.contains(peer.name) { selected.remove(peer.name) }
+                                else { selected.insert(peer.name) }
+                            } label: {
+                                HStack {
+                                    Image(systemName: selected.contains(peer.name) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(selected.contains(peer.name) ? .green : .secondary)
+                                    Text(peer.name).foregroundStyle(.primary)
+                                    Spacer()
+                                }
+                            }
+                        }
+                    }
+                    Button("Guardar grupo") {
+                        controller.saveSubgroup(name: name, members: Array(selected))
+                        name = ""; selected = []
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || selected.isEmpty)
+                }
+
+                if !controller.subgroups.isEmpty {
+                    Section("Grupos guardados") {
+                        ForEach(controller.subgroups) { sg in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(sg.name).font(.subheadline.weight(.semibold))
+                                    Text(sg.members.joined(separator: ", "))
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Button(role: .destructive) {
+                                    controller.deleteSubgroup(name: sg.name)
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Grupos privados")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Listo") { dismiss() }
+                }
+            }
+        }
+    }
 }

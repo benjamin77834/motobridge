@@ -155,10 +155,14 @@ class BridgeController(context: Context) {
         // Opus OFF por defecto (PCM es estable; Opus se activa manual en ambos).
         audio.onCaptured = { bytes, len ->
             val raw = if (bytes.size == len) bytes else bytes.copyOf(len)
-            // En alarma, el targetId transporta MI id de nombre para que los demás
-            // sepan quién pide ayuda. En privado, el id del destinatario.
-            val target = if (channelType == com.motobridge.android.net.VoiceChannel.ALARM) myNameId else privateTargetId
-            val channeled = com.motobridge.android.net.VoiceChannel.wrap(raw, channelType, target)
+            val channeled = if (channelType == com.motobridge.android.net.VoiceChannel.SUBGROUP && activeSubgroupTargets.isNotEmpty()) {
+                // Voz dirigida a un subgrupo de riders elegidos.
+                com.motobridge.android.net.VoiceChannel.wrapSubgroup(raw, activeSubgroupTargets, false)
+            } else {
+                // En alarma, el targetId transporta MI id de nombre. En privado, el id del destinatario.
+                val target = if (channelType == com.motobridge.android.net.VoiceChannel.ALARM) myNameId else privateTargetId
+                com.motobridge.android.net.VoiceChannel.wrap(raw, channelType, target)
+            }
             val toSend = if (meshEnabled) mesh.wrapOutgoing(channeled) else channeled
             transport.sendAudio(toSend, toSend.size)
         }
@@ -223,6 +227,18 @@ class BridgeController(context: Context) {
                 if (text.isNotEmpty() && ttsReady) {
                     val prefix = if (msg.targetId == 0) "Mensaje del grupo. " else "Mensaje privado. "
                     tts?.speak(prefix + text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "txt-rx")
+                }
+            }
+            com.motobridge.android.net.VoiceChannel.SUBGROUP -> {
+                // Subgrupo: solo si mi nameId está en la lista de destinatarios.
+                if (!msg.targets.contains(myNameId)) return
+                if (msg.isText) {
+                    val text = String(msg.audio, Charsets.UTF_8)
+                    if (text.isNotEmpty() && ttsReady) {
+                        tts?.speak("Mensaje de grupo privado. $text", android.speech.tts.TextToSpeech.QUEUE_ADD, null, "txt-rx")
+                    }
+                } else {
+                    noteVoiceActivity(); audio.playFrom(peerId, msg.audio)
                 }
             }
             else -> { noteVoiceActivity(); audio.playFrom(peerId, msg.audio) } // grupo: siempre
@@ -402,15 +418,87 @@ class BridgeController(context: Context) {
         return knownPeers.firstOrNull { com.motobridge.android.net.VoiceChannel.idFor(it) == id } ?: ""
     }
 
+    // Subgrupos (varios riders elegidos).
+    data class Subgroup(val name: String, val members: List<String>)
+    var subgroups by mutableStateOf(loadSubgroups())
+        private set
+    var activeSubgroupName by mutableStateOf<String?>(null)
+        private set
+    private var activeSubgroupTargets = IntArray(0)
+
+    private fun loadSubgroups(): List<Subgroup> {
+        val raw = prefs.getString("subgroups", null) ?: return emptyList()
+        return try {
+            val arr = org.json.JSONArray(raw)
+            (0 until arr.length()).map { i ->
+                val o = arr.getJSONObject(i)
+                val mem = o.getJSONArray("members")
+                Subgroup(o.getString("name"), (0 until mem.length()).map { mem.getString(it) })
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+    private fun saveSubgroupsToPrefs() {
+        val arr = org.json.JSONArray()
+        for (sg in subgroups) {
+            val o = org.json.JSONObject()
+            o.put("name", sg.name)
+            o.put("members", org.json.JSONArray(sg.members))
+            arr.put(o)
+        }
+        prefs.edit().putString("subgroups", arr.toString()).apply()
+    }
+
+    fun saveSubgroup(name: String, members: List<String>) {
+        val clean = name.trim()
+        if (clean.isEmpty() || members.isEmpty()) return
+        val list = subgroups.toMutableList()
+        val idx = list.indexOfFirst { it.name == clean }
+        if (idx >= 0) list[idx] = Subgroup(clean, members) else list.add(Subgroup(clean, members))
+        subgroups = list
+        saveSubgroupsToPrefs()
+    }
+
+    fun deleteSubgroup(name: String) {
+        subgroups = subgroups.filter { it.name != name }
+        if (activeSubgroupName == name) backToGroup()
+        saveSubgroupsToPrefs()
+    }
+
+    fun startSubgroup(name: String) {
+        val sg = subgroups.firstOrNull { it.name == name } ?: return
+        activeSubgroupTargets = sg.members.map { com.motobridge.android.net.VoiceChannel.idFor(it) }.toIntArray()
+        activeSubgroupName = name
+        privatePeerName = null
+        privateTargetId = 0
+        channelType = com.motobridge.android.net.VoiceChannel.SUBGROUP
+    }
+
+    /** Texto a un subgrupo: todos sus miembros lo leen por voz. */
+    fun sendTextToSubgroup(text: String, subgroup: String) {
+        val clean = text.trim()
+        val sg = subgroups.firstOrNull { it.name == subgroup } ?: return
+        if (!isRunning || clean.isEmpty()) return
+        val targets = sg.members.map { com.motobridge.android.net.VoiceChannel.idFor(it) }.toIntArray()
+        val payload = clean.toByteArray(Charsets.UTF_8)
+        val channeled = com.motobridge.android.net.VoiceChannel.wrapSubgroup(payload, targets, true)
+        val toSend = if (meshEnabled) mesh.wrapOutgoing(channeled) else channeled
+        transport.sendAudio(toSend, toSend.size)
+        if (ttsReady) tts?.speak("Mensaje enviado al grupo $subgroup", android.speech.tts.TextToSpeech.QUEUE_ADD, null, "txt-tx")
+    }
+
     fun startPrivate(peerName: String) {
         privateTargetId = com.motobridge.android.net.VoiceChannel.idFor(peerName)
         privatePeerName = peerName
+        activeSubgroupName = null
+        activeSubgroupTargets = IntArray(0)
         channelType = com.motobridge.android.net.VoiceChannel.PRIVATE
     }
     fun backToGroup() {
         channelType = com.motobridge.android.net.VoiceChannel.GROUP
         privatePeerName = null
         privateTargetId = 0
+        activeSubgroupName = null
+        activeSubgroupTargets = IntArray(0)
     }
 
     /** Envía un mensaje ESCRITO que el receptor leerá por voz (TTS).
