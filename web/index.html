@@ -20,6 +20,7 @@
       <nav class="nav-links">
         <a href="#features">Características</a>
         <a href="#how">Cómo funciona</a>
+        <a href="#videos">Videos</a>
         <a href="#precios">Precios</a>
         <a href="manual.html">Manual</a>
         <a href="privacy.html">Privacidad</a>
@@ -136,6 +137,32 @@
     </div>
   </section>
 
+  <!-- Videos demo (carrusel) -->
+  <section id="videos" class="section">
+    <div class="container">
+      <h2>Míralo en acción 🎬</h2>
+      <p class="note" style="margin-bottom:26px">Tres demos rápidas de Mono Bridge en la manada.</p>
+      <div class="carousel">
+        <button class="carousel-btn prev" onclick="moveCarousel(-1)" aria-label="Anterior">‹</button>
+        <div class="carousel-track" id="carouselTrack">
+          <div class="carousel-item">
+            <video src="video/demo1.mp4" controls playsinline preload="metadata" poster="img/icon.png"></video>
+            <p>Conecta y habla con tu grupo 🗣️</p>
+          </div>
+          <div class="carousel-item">
+            <video src="video/demo2.mp4" controls playsinline preload="metadata" poster="img/icon.png"></video>
+            <p>Canal privado y grupos 🔒</p>
+          </div>
+          <div class="carousel-item">
+            <video src="video/demo3.mp4" controls playsinline preload="metadata" poster="img/icon.png"></video>
+            <p>Comandos de voz y más 🎙️</p>
+          </div>
+        </div>
+        <button class="carousel-btn next" onclick="moveCarousel(1)" aria-label="Siguiente">›</button>
+      </div>
+    </div>
+  </section>
+
   <!-- Precio -->
   <section id="precios" class="section">
     <div class="container">
@@ -203,5 +230,14 @@
     </div>
   </footer>
 
+  <script>
+    function moveCarousel(dir){
+      var track = document.getElementById('carouselTrack');
+      var item = track.querySelector('.carousel-item');
+      if(!item) return;
+      var step = item.getBoundingClientRect().width + 16;
+      track.scrollBy({left: dir*step, behavior:'smooth'});
+    }
+  </script>
 </body>
 </html>

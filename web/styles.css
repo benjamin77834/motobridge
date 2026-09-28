@@ -121,3 +121,19 @@ a{color:inherit;text-decoration:none}
 .price-hero .btn{width:100%}
 .mesh-note{margin-top:18px;padding:14px 16px;background:rgba(255,204,51,.1);border-left:3px solid var(--banana);border-radius:8px;color:var(--muted);font-size:14px}
 .mesh-note strong{color:var(--banana)}
+
+/* Carrusel de videos */
+.carousel{position:relative;display:flex;align-items:center;gap:8px}
+.carousel-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:6px 4px 14px;-webkit-overflow-scrolling:touch}
+.carousel-track::-webkit-scrollbar{height:8px}
+.carousel-track::-webkit-scrollbar-thumb{background:var(--jungle);border-radius:4px}
+.carousel-item{flex:0 0 auto;width:260px;scroll-snap-align:center;text-align:center}
+.carousel-item video{width:260px;height:462px;object-fit:cover;border-radius:18px;border:2px solid var(--jungle);background:#000}
+.carousel-item p{margin-top:10px;color:var(--muted);font-size:14px;font-weight:600}
+.carousel-btn{flex:0 0 auto;width:44px;height:44px;border-radius:50%;border:2px solid var(--banana);background:rgba(20,26,18,.7);color:var(--banana);font-size:26px;font-weight:800;cursor:pointer;line-height:1;transition:.2s}
+.carousel-btn:hover{background:var(--banana);color:#3a2600}
+@media(max-width:600px){
+  .carousel-btn{display:none}
+  .carousel-item{width:78vw}
+  .carousel-item video{width:78vw;height:auto;aspect-ratio:9/16}
+}
