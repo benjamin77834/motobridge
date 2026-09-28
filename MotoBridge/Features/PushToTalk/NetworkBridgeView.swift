@@ -14,8 +14,8 @@ struct NetworkBridgeView: View {
             VStack(spacing: 18) {
                 // PANTALLA PRINCIPAL SIMPLE (uso en moto):
                 statusCard          // estado + iniciar/detener
-                pttCard             // botón grande de hablar + manos libres
-                outputCard          // switch Cascos <-> Bocinas
+                outputCard          // switch Cascos <-> Bocinas (arriba, fácil alcance)
+                pttCard             // botón de hablar + manos libres
                 quickChannelCard    // privado rápido + volver al grupo
                 alarmCard           // emergencia
                 settingsButton      // abre Configuración (todo lo demás)
@@ -602,9 +602,9 @@ struct NetworkBridgeView: View {
             HStack {
                 Spacer()
                 Text(controller.isTransmitting ? "HABLANDO" : "HABLAR")
-                    .font(.title.weight(.black))
+                    .font(.title3.weight(.black))
                     .foregroundStyle(.white)
-                    .frame(width: 180, height: 180)
+                    .frame(width: 130, height: 130)
                     .background(
                         Circle().fill(controller.isTransmitting ? Color(red: 0.18, green: 0.49, blue: 0.20) : Color(red: 0.20, green: 0.78, blue: 0.35))
                     )
