@@ -150,7 +150,10 @@ final class NetworkBridgeController: ObservableObject {
         // Audio capturado -> envolver con canal (grupo/privado/alarma) -> enviar.
         audioIO.onCapturedAudio = { [weak self] data in
             guard let self else { return }
-            let channeled = VoiceChannel.wrap(data, type: self.channelType, targetId: self.privateTargetId)
+            // En alarma, el targetId transporta MI id de nombre para que los
+            // demás sepan quién pide ayuda. En privado, el id del destinatario.
+            let target = self.channelType == .alarm ? self.myNameId : self.privateTargetId
+            let channeled = VoiceChannel.wrap(data, type: self.channelType, targetId: target)
             let toSend = self.meshEnabled ? self.mesh.wrapOutgoing(channeled) : channeled
             self.transport.sendAudio(toSend)
             DispatchQueue.main.async {
@@ -229,6 +232,17 @@ final class NetworkBridgeController: ObservableObject {
 
     /// Mi id derivado de mi nombre (para que el privado me reconozca).
     private var myNameId: UInt32 { NetworkBridgeController.idFor(name: localName) }
+
+    /// Traduce un id de nombre (FNV-1a) al nombre visible de un rider conectado.
+    /// Se usa en la alarma para anunciar quién pide ayuda. Devuelve "" si no se
+    /// reconoce (p. ej. el emisor no está en la lista de conectados).
+    private func nameForId(_ id: UInt32) -> String {
+        if id == 0 { return "" }
+        for peer in connectedPeers where NetworkBridgeController.idFor(name: peer.name) == id {
+            return peer.name
+        }
+        return ""
+    }
 
     /// Activa canal privado (susurro) con un rider: tu voz solo le llega a él,
     /// pero tú sigues oyendo al grupo (modo b).
@@ -341,11 +355,16 @@ final class NetworkBridgeController: ObservableObject {
         case .alarm:
             // Emergencia: siempre se reproduce, aunque estés en privado/música.
             audioIO.playReceivedAudio(msg.audio)
-            // Anunciar por voz una sola vez por ráfaga de alarma.
+            // Anunciar por voz una sola vez por ráfaga de alarma, diciendo QUIÉN
+            // pide ayuda (el targetId trae el id de nombre del emisor).
             let now = Date()
             if now.timeIntervalSince(lastAlarmAnnounce) > 4 {
                 lastAlarmAnnounce = now
-                let u = AVSpeechUtterance(string: "Alarma de emergencia")
+                let who = nameForId(msg.targetId)
+                let text = who.isEmpty
+                    ? "Emergencia. Un rider necesita ayuda"
+                    : "Emergencia. \(who) necesita ayuda"
+                let u = AVSpeechUtterance(string: text)
                 u.voice = AVSpeechSynthesisVoice(language: "es-MX")
                 DispatchQueue.main.async { self.speech.speak(u) }
             }

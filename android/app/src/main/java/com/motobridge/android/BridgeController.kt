@@ -65,7 +65,10 @@ class BridgeController(context: Context) {
         // Opus OFF por defecto (PCM es estable; Opus se activa manual en ambos).
         audio.onCaptured = { bytes, len ->
             val raw = if (bytes.size == len) bytes else bytes.copyOf(len)
-            val channeled = com.motobridge.android.net.VoiceChannel.wrap(raw, channelType, privateTargetId)
+            // En alarma, el targetId transporta MI id de nombre para que los demás
+            // sepan quién pide ayuda. En privado, el id del destinatario.
+            val target = if (channelType == com.motobridge.android.net.VoiceChannel.ALARM) myNameId else privateTargetId
+            val channeled = com.motobridge.android.net.VoiceChannel.wrap(raw, channelType, target)
             val toSend = if (meshEnabled) mesh.wrapOutgoing(channeled) else channeled
             transport.sendAudio(toSend, toSend.size)
         }
@@ -115,7 +118,11 @@ class BridgeController(context: Context) {
                 val now = System.currentTimeMillis()
                 if (ttsReady && now - lastAlarmAnnounce > 4000) {
                     lastAlarmAnnounce = now
-                    tts?.speak("Alarma de emergencia", android.speech.tts.TextToSpeech.QUEUE_ADD, null, "alarm-rx")
+                    // Anunciar QUIÉN pide ayuda (targetId trae el id de nombre del emisor).
+                    val who = nameForId(msg.targetId)
+                    val text = if (who.isBlank()) "Emergencia. Un rider necesita ayuda"
+                               else "Emergencia. $who necesita ayuda"
+                    tts?.speak(text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "alarm-rx")
                 }
             }
             else -> audio.playFrom(peerId, msg.audio) // grupo: siempre
@@ -215,6 +222,13 @@ class BridgeController(context: Context) {
         private set
     private var privateTargetId = 0
     private val myNameId get() = com.motobridge.android.net.VoiceChannel.idFor(localName)
+
+    /** Traduce un id de nombre (FNV-1a) al nombre visible de un rider conectado.
+     *  Se usa en la alarma para anunciar quién pide ayuda. "" si no se reconoce. */
+    private fun nameForId(id: Int): String {
+        if (id == 0) return ""
+        return knownPeers.firstOrNull { com.motobridge.android.net.VoiceChannel.idFor(it) == id } ?: ""
+    }
 
     fun startPrivate(peerName: String) {
         privateTargetId = com.motobridge.android.net.VoiceChannel.idFor(peerName)
