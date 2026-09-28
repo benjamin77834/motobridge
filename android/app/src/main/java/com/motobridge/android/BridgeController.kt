@@ -108,6 +108,24 @@ class BridgeController(context: Context) {
 
     fun toggleOutput() { setOutput(if (outputTarget == "headset") "speakers" else "headset") }
 
+    /** Estado visible del botón play/pausa. */
+    var musicPlaying by mutableStateOf(false)
+        private set
+
+    /** Play/Pausa de la música (Spotify/YT Music/etc.) sin salir de la app.
+     *  Envía la tecla multimedia PLAY_PAUSE al reproductor activo del sistema. */
+    fun toggleMusic() {
+        try {
+            val down = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN,
+                android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+            val up = android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,
+                android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+            audioManager.dispatchMediaKeyEvent(down)
+            audioManager.dispatchMediaKeyEvent(up)
+            musicPlaying = !musicPlaying
+        } catch (_: Exception) {}
+    }
+
     // Conmutador música/voz.
     private enum class AudioFocusState { MUSIC, VOICE }
     private var audioFocus = AudioFocusState.MUSIC

@@ -302,13 +302,26 @@ struct NetworkBridgeView: View {
             }
             .disabled(!controller.isRunning || controller.autoMusicMode)
 
+            // Play/Pausa de la música (Spotify/Apple Music) sin salir de la app.
+            Button {
+                controller.toggleMusic()
+            } label: {
+                Label(controller.musicPlaying ? "Pausar música" : "Reproducir música",
+                      systemImage: controller.musicPlaying ? "pause.fill" : "play.fill")
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity, minHeight: 48)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
+
             Text(controller.autoMusicMode
                  ? "En modo automático la salida cambia sola al hablar."
-                 : "Cascos = intercom con micrófono. Bocinas = música de la moto (CarPlay). También los botones ◀◀/▶▶ del intercom cambian la salida.")
+                 : "Cascos = intercom con micrófono. Bocinas = música de la moto (CarPlay). El botón de música controla Spotify/Apple Music sin salir de la app.")
                 .font(.caption2).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .cardStyle()
+        .onAppear { controller.refreshMusicState() }
     }
 
     private var alarmCard: some View {

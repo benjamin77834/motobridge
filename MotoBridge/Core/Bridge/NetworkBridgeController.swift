@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import Combine
+import MediaPlayer
 import MultipeerConnectivity
 import UserNotifications
 
@@ -216,6 +217,34 @@ final class NetworkBridgeController: ObservableObject {
     /// Alterna entre cascos y bocinas (para el botón del intercom / switch).
     func toggleOutput() {
         setOutput(outputTarget == .headset ? .speakers : .headset)
+    }
+
+    // MARK: - Control de música del sistema (Spotify / Apple Music)
+
+    /// ¿Está sonando música del reproductor del sistema? (para el icono play/pausa)
+    @Published private(set) var musicPlaying: Bool = false
+
+    /// Reproductor del sistema: controla la música de Apple Music / Spotify que
+    /// ya esté cargada, sin tener que abrir esa app.
+    private let systemPlayer = MPMusicPlayerController.systemMusicPlayer
+
+    /// Play/Pausa de la música del sistema. Así el rider no tiene que salir de
+    /// Mono Bridge para pausar o reanudar Spotify/Apple Music.
+    func toggleMusic() {
+        if systemPlayer.playbackState == .playing {
+            systemPlayer.pause()
+            musicPlaying = false
+            log.info(.bridge, "Música: pausa")
+        } else {
+            systemPlayer.play()
+            musicPlaying = true
+            log.info(.bridge, "Música: play")
+        }
+    }
+
+    /// Sincroniza el estado visible del botón con el reproductor real.
+    func refreshMusicState() {
+        musicPlaying = systemPlayer.playbackState == .playing
     }
 
     /// Estado interno del conmutador música/voz.

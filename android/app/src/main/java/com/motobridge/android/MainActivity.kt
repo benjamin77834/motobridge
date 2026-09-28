@@ -243,8 +243,15 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
                     modifier = Modifier.weight(1f).height(48.dp)
                 ) { Text("🔊 Bocinas", fontWeight = FontWeight.Bold) }
             }
+            // Play/Pausa de la música sin salir de la app.
+            Button(
+                onClick = { controller.toggleMusic() },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7A1A)),
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) { Text(if (controller.musicPlaying) "⏸ Pausar música" else "▶ Reproducir música",
+                     fontWeight = FontWeight.Bold, color = Color.White) }
             Text(if (controller.autoMusicMode) "En modo automático la salida cambia sola al hablar."
-                 else "Cascos = intercom. Bocinas = música (CarPlay). Botones ◀◀/▶▶ del intercom también cambian la salida.",
+                 else "Cascos = intercom. Bocinas = música (CarPlay). El botón de música controla Spotify/YT Music sin salir de la app.",
                  fontSize = 11.sp, color = Color.Gray)
         }
     }
