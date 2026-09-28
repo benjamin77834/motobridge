@@ -312,7 +312,7 @@ struct NetworkBridgeView: View {
                     .font(.headline)
             }
             .tint(.blue)
-            Text("Actívalo para usar el micrófono de intercoms como el FreedConn, que solo lo habilitan en llamadas. iOS mostrará el bridge como una llamada. No compatible con 'no interrumpir música'. Si el bridge está activo, se reinicia solo al cambiarlo.")
+            Text("Recomendado (activado). iOS trata el bridge como una llamada real: así los comandos de voz de Siri siguen funcionando aunque estés conectado, y se activa el micrófono de intercoms como el FreedConn. No compatible con 'no interrumpir música'. Si el bridge está activo, se reinicia solo al cambiarlo.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

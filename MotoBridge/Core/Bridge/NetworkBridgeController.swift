@@ -79,8 +79,12 @@ final class NetworkBridgeController: ObservableObject {
     /// el micrófono HFP de intercoms como el FreedConn. Al activarlo, iOS muestra
     /// la interfaz de llamada. Incompatible con coexistir (la llamada toma el
     /// control del audio). Si se cambia con el bridge activo, se reinicia solo.
-    @Published var useCallKit: Bool = false {
+    /// Activado por defecto: en modo llamada, iOS deja que Siri conviva con el
+    /// bridge (como en una llamada telefónica real), así los comandos de voz
+    /// siguen funcionando mientras estás conectado. Se persiste la preferencia.
+    @Published var useCallKit: Bool = (UserDefaults.standard.object(forKey: "useCallKit") as? Bool) ?? true {
         didSet {
+            UserDefaults.standard.set(useCallKit, forKey: "useCallKit")
             guard oldValue != useCallKit, isRunning else { return }
             // Reiniciar el bridge para aplicar el nuevo modo de audio.
             let wasRunning = isRunning
