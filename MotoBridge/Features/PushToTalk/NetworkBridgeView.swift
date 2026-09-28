@@ -34,6 +34,7 @@ struct NetworkBridgeView: View {
                         audioSetupCard
                         modeSelectorCard
                         coexistCard
+                        voiceCommandsCard
                         peersCard
                         metricsCard
                         diagnosticCard
@@ -795,6 +796,43 @@ struct NetworkBridgeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardStyle()
     }
+
+    // Lista de comandos de voz (Siri) disponibles.
+    private var voiceCommandsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Comandos de voz (Siri)", systemImage: "mic.circle.fill")
+                .font(.headline).foregroundStyle(.blue)
+            Text("Di «Oye Siri…» seguido de:")
+                .font(.caption).foregroundStyle(.secondary)
+            ForEach(Self.voiceCommands, id: \.0) { cmd in
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: cmd.1).foregroundStyle(.blue).frame(width: 22)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("«\(cmd.0)»").font(.subheadline.weight(.semibold))
+                        Text(cmd.2).font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            Text("Funciona mejor con el «Modo llamada» activo, para que Siri conviva con el intercom.")
+                .font(.caption2).foregroundStyle(.secondary).padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardStyle()
+    }
+
+    // (frase, icono, descripción). "Mono Bridge" es el nombre de la app.
+    private static let voiceCommands: [(String, String, String)] = [
+        ("Inicia Mono Bridge", "antenna.radiowaves.left.and.right", "Activa el bridge"),
+        ("Desconecta Mono Bridge", "xmark.circle", "Detiene el bridge"),
+        ("Activa el micrófono en Mono Bridge", "mic.fill", "Abre el micrófono para hablar"),
+        ("Silencia Mono Bridge", "mic.slash.fill", "Silencia el micrófono"),
+        ("Sube el volumen en Mono Bridge", "speaker.plus.fill", "Sube el volumen de escucha"),
+        ("Emergencia en Mono Bridge", "exclamationmark.triangle.fill", "Alarma a todo el grupo"),
+        ("Cambia a cascos en Mono Bridge", "headphones", "Audio del intercom a los cascos"),
+        ("Cambia a bocinas en Mono Bridge", "speaker.wave.2.fill", "Audio a las bocinas (CarPlay)"),
+        ("Pon música en Mono Bridge", "play.fill", "Play/pausa de la música"),
+        ("Vuelve al grupo en Mono Bridge", "person.3.fill", "Sale de privado/subgrupo")
+    ]
 
     private var tipCard: some View {
         VStack(alignment: .leading, spacing: 6) {
