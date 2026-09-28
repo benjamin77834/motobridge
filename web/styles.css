@@ -119,3 +119,5 @@ a{color:inherit;text-decoration:none}
 .plan-center{align-items:center;text-align:left;max-width:320px;margin:0 auto 24px}
 .plan-center li{padding-left:2px}
 .price-hero .btn{width:100%}
+.mesh-note{margin-top:18px;padding:14px 16px;background:rgba(255,204,51,.1);border-left:3px solid var(--banana);border-radius:8px;color:var(--muted);font-size:14px}
+.mesh-note strong{color:var(--banana)}
