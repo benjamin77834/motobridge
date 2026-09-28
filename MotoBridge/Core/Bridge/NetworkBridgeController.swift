@@ -861,15 +861,27 @@ final class NetworkBridgeController: ObservableObject {
 
     /// Sesión en modo música: reproducción estéreo por A2DP/CarPlay, mezclando
     /// con la música de otras apps, SIN micrófono. Usada en reposo (sin voz).
+    ///
+    /// Para recuperar ALTA FIDELIDAD: al venir del modo voz, el Bluetooth quedó
+    /// negociado en perfil HFP (mono, calidad de llamada). iOS no re-negocia a
+    /// A2DP si la sesión sigue activa con el mismo dispositivo, así que la
+    /// música se oye "de llamada". La solución es DESACTIVAR la sesión primero
+    /// (suelta HFP) y reconfigurar limpio en .playback → iOS re-negocia A2DP
+    /// estéreo (o usa la salida CarPlay de alta calidad si está conectada).
     private func configureSessionForMusic() {
         do {
+            // 1) Soltar la ruta HFP actual para forzar re-negociación.
+            try? audioSession.setActive(false, options: [.notifyOthersOnDeactivation])
+            // 2) Categoría de reproducción pura, alta fidelidad. NO usamos
+            //    .allowBluetoothHFP aquí (eso fuerza el perfil de llamada mono).
             try audioSession.setCategory(
                 .playback,
                 mode: .default,
                 options: [.mixWithOthers, .allowBluetoothA2DP]
             )
             try audioSession.setActive(true, options: [])
-            log.info(.audioSession, "AudioSession en modo música (A2DP estéreo)")
+            let outs = audioSession.currentRoute.outputs.map { "\($0.portName)[\($0.portType.rawValue)]" }
+            log.info(.audioSession, "Modo música (A2DP/CarPlay HiFi): \(outs.joined(separator: ", "))")
         } catch {
             log.error(.audioSession, "Error modo música: \(error.localizedDescription)")
         }
