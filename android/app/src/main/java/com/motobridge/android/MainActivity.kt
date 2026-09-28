@@ -411,6 +411,10 @@ private fun SettingsControls(controller: BridgeController) {
                      modifier = Modifier.weight(1f))
                 TextButton(onClick = { controller.detectAudioQuality() }) { Text("Detectar") }
             }
+            if (controller.rayBanDetected) {
+                Text("👓 Ray-Ban Meta detectadas — subí el volumen de escucha. Su botón no controla la app; usa el botón HABLAR.",
+                     fontSize = 11.sp, color = Color(0xFFFF7A1A))
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Iniciar en intercom al conectar", Modifier.weight(1f))
                 Switch(checked = controller.autoIntercom, onCheckedChange = { controller.updateAutoIntercom(it) })

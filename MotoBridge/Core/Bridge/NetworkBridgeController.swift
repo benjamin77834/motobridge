@@ -286,6 +286,11 @@ final class NetworkBridgeController: ObservableObject {
     enum AudioQuality: String { case high = "Alta (AirPods/Beats)", standard = "Estándar", low = "Voz (intercom HFP)" }
     @Published private(set) var detectedQuality: AudioQuality = .standard
 
+    /// ¿Se detectaron unas Ray-Ban Meta como salida? (volumen bajo → sube ganancia).
+    @Published private(set) var rayBanDetected = false
+    /// Para subir la ganancia una sola vez al detectarlas (no pisar ajustes del usuario después).
+    private var rayBanAutoBoosted = false
+
     /// Entradas de audio disponibles (AirPods, casco, mic del teléfono…).
     @Published private(set) var availableInputs: [AudioInputOption] = []
 
@@ -784,6 +789,20 @@ final class NetworkBridgeController: ObservableObject {
         let isHighEnd = allNames.contains { $0.contains("airpod") || $0.contains("beats") }
         let isA2DP = route.outputs.contains { $0.portType == .bluetoothA2DP }
         let quality: AudioQuality = (isHighEnd || isA2DP) ? .high : (route.inputs.contains { $0.portType == .bluetoothHFP } ? .low : .standard)
+
+        // Ray-Ban Meta: se conectan como audífono normal pero su volumen de
+        // salida es bajo. Al detectarlas, subir la ganancia de escucha una vez.
+        let isRayBan = allNames.contains { $0.contains("ray-ban") || $0.contains("ray ban") || $0.contains("rayban") || $0.contains("meta") }
+        if isRayBan, !rayBanAutoBoosted {
+            rayBanAutoBoosted = true
+            DispatchQueue.main.async {
+                if self.speakerGain < 3.0 { self.speakerGain = 3.0 } // sube volumen de escucha
+            }
+            log.info(.audioRoute, "Ray-Ban Meta detectadas: ganancia de escucha aumentada")
+        } else if !isRayBan {
+            rayBanAutoBoosted = false
+        }
+        DispatchQueue.main.async { self.rayBanDetected = isRayBan }
 
         // Ajuste adaptativo del procesamiento según el dispositivo:
         // - AirPods/Beats: su hardware ya cancela ruido → filtrado suave y SIN

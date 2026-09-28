@@ -357,6 +357,13 @@ struct NetworkBridgeView: View {
             .buttonStyle(.borderedProminent)
             .tint(.orange)
 
+            if controller.rayBanDetected {
+                Label("Ray-Ban Meta detectadas — subí el volumen de escucha automáticamente. Su botón no controla la app; usa el botón HABLAR o Siri.",
+                      systemImage: "eyeglasses")
+                    .font(.caption2).foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             Text(controller.autoMusicMode
                  ? "En modo automático la salida cambia sola al hablar."
                  : "Cascos = intercom con micrófono. Bocinas = música de la moto (CarPlay). El botón de música controla Spotify/Apple Music sin salir de la app.")

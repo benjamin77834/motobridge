@@ -403,6 +403,11 @@ class BridgeController(context: Context) {
     var detectedQuality by mutableStateOf("Estándar")
         private set
 
+    /** ¿Se detectaron unas Ray-Ban Meta? (volumen bajo → sube ganancia). */
+    var rayBanDetected by mutableStateOf(false)
+        private set
+    private var rayBanAutoBoosted = false
+
     // Canal de voz: grupo / privado / alarma.
     var channelType by mutableStateOf(com.motobridge.android.net.VoiceChannel.GROUP)
         private set
@@ -540,6 +545,7 @@ class BridgeController(context: Context) {
             val am = appContext.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
             val devices = am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
             var high = false
+            var rayBan = false
             for (d in devices) {
                 val name = (d.productName ?: "").toString().lowercase()
                 val t = d.type
@@ -547,6 +553,16 @@ class BridgeController(context: Context) {
                     t == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) {
                     high = true
                 }
+                if (name.contains("ray-ban") || name.contains("ray ban") || name.contains("rayban") || name.contains("meta")) {
+                    rayBan = true
+                }
+            }
+            rayBanDetected = rayBan
+            if (rayBan && !rayBanAutoBoosted) {
+                rayBanAutoBoosted = true
+                if (speakerGain < 3.0f) updateSpeakerGain(3.0f)  // sube volumen de escucha
+            } else if (!rayBan) {
+                rayBanAutoBoosted = false
             }
             if (high) {
                 detectedQuality = "Alta (audífonos)"
