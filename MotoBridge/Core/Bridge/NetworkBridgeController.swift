@@ -230,7 +230,25 @@ final class NetworkBridgeController: ObservableObject {
 
     /// Play/Pausa de la música del sistema. Así el rider no tiene que salir de
     /// Mono Bridge para pausar o reanudar Spotify/Apple Music.
+    /// Pide autorización primero: sin ella, iOS aborta la app al tocar el player.
     func toggleMusic() {
+        let status = MPMediaLibrary.authorizationStatus()
+        switch status {
+        case .authorized:
+            performToggleMusic()
+        case .notDetermined:
+            MPMediaLibrary.requestAuthorization { [weak self] newStatus in
+                DispatchQueue.main.async {
+                    if newStatus == .authorized { self?.performToggleMusic() }
+                    else { self?.log.warning(.bridge, "Música: permiso denegado") }
+                }
+            }
+        default:
+            log.warning(.bridge, "Música: sin permiso para controlar la reproducción")
+        }
+    }
+
+    private func performToggleMusic() {
         if systemPlayer.playbackState == .playing {
             systemPlayer.pause()
             musicPlaying = false
@@ -243,7 +261,9 @@ final class NetworkBridgeController: ObservableObject {
     }
 
     /// Sincroniza el estado visible del botón con el reproductor real.
+    /// Solo consulta si ya hay permiso (evita abortar la app sin autorización).
     func refreshMusicState() {
+        guard MPMediaLibrary.authorizationStatus() == .authorized else { return }
         musicPlaying = systemPlayer.playbackState == .playing
     }
 

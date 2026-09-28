@@ -33,6 +33,8 @@
 	<string>MotoBridge usa la red local para conectar con otro dispositivo cercano y transmitir audio en vivo.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>MotoBridge usa el micrófono para transmitir tu voz al otro dispositivo.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Mono Bridge controla la reproducción de música (play/pausa) para que no tengas que salir de la app mientras conduces.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
