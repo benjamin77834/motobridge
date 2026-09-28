@@ -19,6 +19,7 @@ class BridgeController(context: Context) {
 
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences("monobridge", Context.MODE_PRIVATE)
+    private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
     private var localName = prefs.getString("riderName", null)?.takeIf { it.isNotBlank() } ?: (Build.MODEL ?: "Rider")
 
     private val audio = AudioIO()
@@ -61,13 +62,48 @@ class BridgeController(context: Context) {
     var outputTarget by mutableStateOf(prefs.getString("outputTarget", "headset") ?: "headset")
         private set
 
-    /** Cambia la salida. Bocinas = libera mic (música por A2DP). Cascos = intercom. */
+    /** Cambia la salida. Bocinas = libera mic (música por A2DP/CarPlay).
+     *  Cascos = intercom por el audífono/Hysnox (HFP/SCO). */
     fun setOutput(target: String) {
         if (outputTarget == target) return
         outputTarget = target
         prefs.edit().putString("outputTarget", target).apply()
         if (!isRunning || autoMusicMode) return
-        if (target == "speakers") audio.stop() else audio.start()
+        if (target == "speakers") { audio.stop(); routeToMedia() }
+        else { routeToHeadset(); audio.start() }
+    }
+
+    /** Enruta al audífono/Hysnox (HFP): modo comunicación + SCO. */
+    private fun routeToHeadset() {
+        try {
+            audioManager.mode = android.media.AudioManager.MODE_IN_COMMUNICATION
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                val dev = audioManager.availableCommunicationDevices.firstOrNull {
+                    it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                }
+                if (dev != null) audioManager.setCommunicationDevice(dev)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.startBluetoothSco()
+                @Suppress("DEPRECATION")
+                audioManager.isBluetoothScoOn = true
+            }
+        } catch (_: Exception) {}
+    }
+
+    /** Enruta a media (A2DP/CarPlay): modo normal, sin SCO. */
+    private fun routeToMedia() {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                audioManager.clearCommunicationDevice()
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.isBluetoothScoOn = false
+                @Suppress("DEPRECATION")
+                audioManager.stopBluetoothSco()
+            }
+            audioManager.mode = android.media.AudioManager.MODE_NORMAL
+        } catch (_: Exception) {}
     }
 
     fun toggleOutput() { setOutput(if (outputTarget == "headset") "speakers" else "headset") }
@@ -237,7 +273,9 @@ class BridgeController(context: Context) {
             startFocusTimer()
         } else if (outputTarget == "speakers") {
             // Salida a bocinas: no capturar mic, deja que la música suene por A2DP.
+            routeToMedia()
         } else {
+            routeToHeadset()
             audio.start()
         }
         remote.start()
@@ -253,6 +291,7 @@ class BridgeController(context: Context) {
         knownPeers = emptySet()
         transport.stop()
         audio.stop()
+        routeToMedia() // restaurar modo normal al salir
     }
 
     /** Lee los botones multimedia del intercom (Hysnox) vía MediaSession:

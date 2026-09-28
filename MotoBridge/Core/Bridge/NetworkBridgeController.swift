@@ -161,14 +161,56 @@ final class NetworkBridgeController: ObservableObject {
             guard let self else { return }
             switch target {
             case .speakers:
+                // Modo música: A2DP estéreo. iOS enruta a CarPlay si está
+                // conectado (es la salida A2DP/HDMI del vehículo).
                 self.configureSessionForMusic()
-                self.audioIO.stop()   // libera mic → música por bocinas
+                self.audioIO.stop()   // libera mic → música por bocinas/CarPlay
+                self.routeToCarPlayIfAvailable()
             case .headset:
+                // Modo intercom: HFP con el audífono/Hysnox como entrada+salida.
                 self.configureAudioSession()
+                self.forcePreferredHFPInput()
                 try? self.audioIO.start()
                 self.refreshInputs()
             }
+            self.logCurrentRoute()
         }
+    }
+
+    /// Fija el puerto Bluetooth HFP (audífono / Hysnox) como entrada preferida,
+    /// para que el intercom use ese micrófono y altavoz.
+    private func forcePreferredHFPInput() {
+        let inputs = audioSession.availableInputs ?? []
+        if let hfp = inputs.first(where: { $0.portType == .bluetoothHFP }) {
+            do {
+                try audioSession.setPreferredInput(hfp)
+                log.info(.audioRoute, "Cascos: entrada HFP fijada → \(hfp.portName)")
+            } catch {
+                log.warning(.audioRoute, "No se pudo fijar HFP: \(error.localizedDescription)")
+            }
+        } else {
+            log.warning(.audioRoute, "Cascos: no hay puerto HFP (¿intercom en modo teléfono?)")
+        }
+    }
+
+    /// En modo música, si hay CarPlay conectado, se prefiere esa salida. iOS ya
+    /// enruta A2DP/CarPlay automáticamente; aquí solo lo registramos y quitamos
+    /// cualquier override a altavoz que hubiéramos puesto antes.
+    private func routeToCarPlayIfAvailable() {
+        do { try audioSession.overrideOutputAudioPort(.none) } catch {
+            log.warning(.audioRoute, "override .none falló: \(error.localizedDescription)")
+        }
+        let outs = audioSession.currentRoute.outputs.map { "\($0.portName) [\($0.portType.rawValue)]" }
+        let hasCarPlay = audioSession.currentRoute.outputs.contains { $0.portType == .carAudio }
+        log.info(.audioRoute, "Bocinas: salida actual = \(outs.joined(separator: ", ")); CarPlay=\(hasCarPlay)")
+    }
+
+    /// Registra la ruta de audio activa (diagnóstico del switch de salida).
+    private func logCurrentRoute() {
+        let route = audioSession.currentRoute
+        let ins = route.inputs.map { $0.portType.rawValue }.joined(separator: ",")
+        let outs = route.outputs.map { $0.portType.rawValue }.joined(separator: ",")
+        log.info(.audioRoute, "Ruta activa → in:[\(ins)] out:[\(outs)]")
     }
 
     /// Alterna entre cascos y bocinas (para el botón del intercom / switch).
