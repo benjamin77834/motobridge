@@ -1,0 +1,12 @@
+version: 1
+frontend:
+  phases:
+    build:
+      commands: []
+  artifacts:
+    # El sitio estático está en la carpeta web/
+    baseDirectory: web
+    files:
+      - '**/*'
+  cache:
+    paths: []

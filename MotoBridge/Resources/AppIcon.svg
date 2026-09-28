@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F6A623"/>
+      <stop offset="0.55" stop-color="#F2B34A"/>
+      <stop offset="1" stop-color="#E8C06B"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D9B476"/>
+      <stop offset="1" stop-color="#C39C5E"/>
+    </linearGradient>
+    <linearGradient id="truckBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E6FB0"/>
+      <stop offset="1" stop-color="#1E4E82"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFE7A8"/>
+      <stop offset="1" stop-color="#F6A623" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Cielo -->
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <circle cx="512" cy="330" r="360" fill="url(#sun)"/>
+
+  <!-- Nubes suaves -->
+  <g fill="#F7D79A" opacity="0.55">
+    <ellipse cx="200" cy="180" rx="120" ry="34"/>
+    <ellipse cx="300" cy="210" rx="90" ry="26"/>
+    <ellipse cx="820" cy="150" rx="130" ry="34"/>
+  </g>
+
+  <!-- Silueta de edificio (catedral) al fondo, sutil -->
+  <g fill="#C98A3A" opacity="0.55">
+    <rect x="70" y="300" width="150" height="230"/>
+    <rect x="95" y="240" width="30" height="70"/>
+    <rect x="165" y="240" width="30" height="70"/>
+    <path d="M85 300 L110 250 L135 300 Z"/>
+    <path d="M155 300 L180 250 L205 300 Z"/>
+  </g>
+
+  <!-- Satélite arriba a la derecha -->
+  <g transform="translate(820,190) rotate(-15)">
+    <rect x="-18" y="-30" width="36" height="60" rx="6" fill="#8A93A3"/>
+    <rect x="-95" y="-14" width="60" height="28" fill="#254a86"/>
+    <rect x="35" y="-14" width="60" height="28" fill="#254a86"/>
+    <line x1="-95" y1="0" x2="95" y2="0" stroke="#5B6472" stroke-width="4"/>
+    <circle cx="0" cy="34" r="8" fill="#C9CFD8"/>
+  </g>
+
+  <!-- Ondas de señal entre antena y satélite -->
+  <g stroke="#FFFFFF" stroke-width="9" fill="none" stroke-linecap="round" opacity="0.85">
+    <path d="M640 250 Q700 220 760 210"/>
+    <path d="M650 300 Q730 250 800 235"/>
+  </g>
+
+  <!-- Suelo / plaza -->
+  <rect x="0" y="720" width="1024" height="304" fill="url(#ground)"/>
+  <g stroke="#B48F52" stroke-width="4" opacity="0.6">
+    <line x1="0" y1="800" x2="1024" y2="800"/>
+    <line x1="0" y1="880" x2="1024" y2="880"/>
+    <line x1="0" y1="960" x2="1024" y2="960"/>
+  </g>
+
+  <!-- ===== ANTENA PARABÓLICA (sobre plataforma) ===== -->
+  <g transform="translate(560,470)">
+    <!-- base/generador -->
+    <rect x="30" y="120" width="150" height="90" rx="8" fill="#9AA3B2"/>
+    <rect x="45" y="135" width="30" height="60" fill="#7A8394"/>
+    <rect x="85" y="135" width="30" height="60" fill="#7A8394"/>
+    <!-- soporte -->
+    <rect x="-6" y="60" width="20" height="90" fill="#6E7686"/>
+    <!-- plato -->
+    <ellipse cx="0" cy="0" rx="140" ry="120" fill="#D8DCE2"/>
+    <ellipse cx="0" cy="0" rx="140" ry="120" fill="none" stroke="#B7BDC7" stroke-width="8"/>
+    <ellipse cx="0" cy="0" rx="70" ry="60" fill="#C3C9D2"/>
+    <!-- receptor central -->
+    <line x1="0" y1="0" x2="70" y2="-40" stroke="#8A93A3" stroke-width="8"/>
+    <circle cx="72" cy="-42" r="14" fill="#8A93A3"/>
+  </g>
+
+  <!-- ===== CAMIÓN AZUL (tres cuartos frontal) ===== -->
+  <g transform="translate(120,560)">
+    <!-- remolque plataforma -->
+    <rect x="330" y="150" width="470" height="40" rx="6" fill="#4A5568"/>
+    <!-- cabina -->
+    <path d="M40 60 Q40 30 90 30 L250 30 Q290 30 300 90 L300 210 L20 210 L20 120 Q20 70 40 60 Z" fill="url(#truckBlue)"/>
+    <!-- capó frontal -->
+    <path d="M20 120 L20 210 L-40 210 L-40 150 Q-40 120 -10 118 Z" fill="#2A649F"/>
+    <!-- parrilla -->
+    <rect x="-40" y="155" width="26" height="45" rx="4" fill="#C9CFD8"/>
+    <!-- parabrisas -->
+    <path d="M70 55 L240 55 Q270 55 278 95 L278 130 L70 130 Z" fill="#9FD3F0"/>
+    <path d="M175 55 L175 130" stroke="#2E6FB0" stroke-width="6"/>
+    <!-- ventana lateral con gorila -->
+    <rect x="60" y="140" width="120" height="60" rx="8" fill="#8FC7E8"/>
+    <!-- tubo escape -->
+    <rect x="255" y="-30" width="16" height="120" rx="6" fill="#B7BDC7"/>
+    <!-- faro -->
+    <circle cx="-30" cy="188" r="12" fill="#FFE27A"/>
+    <!-- ruedas -->
+    <circle cx="10" cy="220" r="46" fill="#111318"/><circle cx="10" cy="220" r="20" fill="#3A404E"/>
+    <circle cx="210" cy="220" r="46" fill="#111318"/><circle cx="210" cy="220" r="20" fill="#3A404E"/>
+    <circle cx="470" cy="220" r="42" fill="#111318"/><circle cx="470" cy="220" r="18" fill="#3A404E"/>
+    <circle cx="560" cy="220" r="42" fill="#111318"/><circle cx="560" cy="220" r="18" fill="#3A404E"/>
+    <circle cx="700" cy="220" r="42" fill="#111318"/><circle cx="700" cy="220" r="18" fill="#3A404E"/>
+    <!-- placa -->
+    <rect x="-44" y="205" width="40" height="16" rx="3" fill="#EDE7D8"/>
+    <text x="-24" y="217" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#333" text-anchor="middle">G0R1L4</text>
+
+    <!-- ===== GORILA al volante (en la ventana) ===== -->
+    <g transform="translate(120,168)">
+      <!-- cabeza -->
+      <ellipse cx="0" cy="0" rx="42" ry="40" fill="#3A312A"/>
+      <!-- cara -->
+      <ellipse cx="2" cy="8" rx="26" ry="24" fill="#6B5240"/>
+      <!-- audífonos -->
+      <path d="M-40 -6 Q0 -46 40 -6" stroke="#111318" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <rect x="-52" y="-8" width="20" height="34" rx="8" fill="#1B2130"/>
+      <rect x="32" y="-8" width="20" height="34" rx="8" fill="#1B2130"/>
+      <!-- ojos -->
+      <circle cx="-9" cy="2" r="4.5" fill="#1a120c"/>
+      <circle cx="13" cy="2" r="4.5" fill="#1a120c"/>
+      <!-- brazo al volante -->
+      <path d="M-6 34 Q-30 44 -46 40" stroke="#3A312A" stroke-width="18" stroke-linecap="round" fill="none"/>
+    </g>
+  </g>
+</svg>

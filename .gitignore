@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# Xcode / iOS
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+build/
+*.ipa
+
+# Android / Gradle
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/keystore/
+*.jks
+
+# APKs y bundles (no versionar binarios pesados)
+*.apk
+*.aab
+
+# Node (por si acaso)
+node_modules/

@@ -1,0 +1,8 @@
+
+# Firma release (NO subir a git)
+keystore/
+*.jks
+local.properties
+.gradle/
+build/
+app/build/

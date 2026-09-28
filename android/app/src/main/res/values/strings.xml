@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_start">Activar bridge</string>
+    <string name="sc_stop">Detener bridge</string>
+    <string name="sc_mic_on">Activar micrófono</string>
+    <string name="sc_mic_off">Silenciar micrófono</string>
+</resources>

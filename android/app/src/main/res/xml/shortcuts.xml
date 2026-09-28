@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Comandos de voz para el Asistente de Google (App Actions).
+  Cada capability mapea una intención del sistema a un deep link que MainActivity
+  interpreta. El usuario dice "Hey Google, <acción> en MotoBridge".
+
+  Nota: las built-in intents (BII) de Google requieren verificación de la app
+  publicada para funcionar plenamente con el Asistente. Estos shortcuts también
+  funcionan como accesos directos manuales del sistema.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android"
+           xmlns:tools="http://schemas.android.com/tools">
+
+    <capability android:name="actions.intent.OPEN_APP_FEATURE">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.monkeyphone.monobridge"
+            android:targetClass="com.motobridge.android.MainActivity">
+            <parameter
+                android:name="feature"
+                android:key="feature" />
+        </intent>
+    </capability>
+
+    <!-- Accesos directos estáticos (aparecen al mantener pulsado el icono) -->
+    <shortcut
+        android:shortcutId="start_bridge"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/sc_start">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.monkeyphone.monobridge"
+            android:targetClass="com.motobridge.android.MainActivity"
+            android:data="motobridge://command/start" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="stop_bridge"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/sc_stop">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.monkeyphone.monobridge"
+            android:targetClass="com.motobridge.android.MainActivity"
+            android:data="motobridge://command/stop" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="mic_on"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/sc_mic_on">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.monkeyphone.monobridge"
+            android:targetClass="com.motobridge.android.MainActivity"
+            android:data="motobridge://command/mic_on" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="mic_off"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/sc_mic_off">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.monkeyphone.monobridge"
+            android:targetClass="com.motobridge.android.MainActivity"
+            android:data="motobridge://command/mic_off" />
+    </shortcut>
+</shortcuts>
