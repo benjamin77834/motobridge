@@ -43,8 +43,8 @@ class LocalNetworkTransport(
     private var localPort: Int = 0
     private var running = false
 
-    /** Un peer del grupo (dirección UDP). */
-    private data class Peer(val name: String, val address: InetAddress, val port: Int)
+    /** Un peer del grupo (dirección UDP). lastRx = última vez que llegó un paquete. */
+    private data class Peer(val name: String, val address: InetAddress, val port: Int, @Volatile var lastRx: Long = System.currentTimeMillis())
 
     /** Peers del grupo, por nombre. Concurrente porque se accede desde varios hilos. */
     private val peers = java.util.concurrent.ConcurrentHashMap<String, Peer>()
@@ -156,6 +156,13 @@ class LocalNetworkTransport(
             }
 
             override fun onServiceLost(info: NsdServiceInfo) {
+                // NSD reporta pérdidas falsas con frecuencia. NO desconectar si
+                // el peer sigue recibiendo audio reciente (la verdad es el UDP).
+                val p = peers[info.serviceName] ?: return
+                if (System.currentTimeMillis() - p.lastRx < 5000) {
+                    emit("NSD perdió ${info.serviceName} pero sigue el audio; se mantiene")
+                    return
+                }
                 if (peers.remove(info.serviceName) != null) {
                     if (peers.isEmpty()) onState?.invoke(TransportState.NOT_CONNECTED)
                     onPeer?.invoke(peers.keys.joinToString(", ").ifEmpty { null })
@@ -201,10 +208,15 @@ class LocalNetworkTransport(
                 try {
                     val dp = DatagramPacket(buf, buf.size)
                     s.receive(dp)
-                    // Adoptar al emisor si aún no está en el grupo (el lado que
-                    // "espera" descubre así la dirección del que le habla).
-                    val key = "${dp.address.hostAddress}:${dp.port}"
-                    if (peers.values.none { it.address == dp.address && it.port == dp.port }) {
+                    // ¿La IP:puerto ya corresponde a un peer conocido (por nombre)?
+                    val existing = peers.values.firstOrNull { it.address == dp.address && it.port == dp.port }
+                    val key: String
+                    if (existing != null) {
+                        key = existing.name                 // usar su nombre, no "IP:puerto"
+                        existing.lastRx = System.currentTimeMillis()
+                    } else {
+                        // Emisor nuevo que aún no habíamos resuelto por NSD.
+                        key = "${dp.address.hostAddress}:${dp.port}"
                         addPeer(key, dp.address, dp.port)
                     }
                     val audio = MotoBridgePacket.decodeAudio(dp.data, dp.length)
