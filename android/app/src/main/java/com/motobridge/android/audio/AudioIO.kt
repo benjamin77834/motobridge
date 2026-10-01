@@ -102,6 +102,12 @@ class AudioIO {
 
         captureThread = thread(isDaemon = true, name = "motobridge-capture") {
             val buffer = ShortArray(inBufSize / 2)
+            // Acumulador para ENVIAR en bloques FIJOS de 320 muestras (20 ms a
+            // 16 kHz). Enviar bloques de tamaño variable (lo que devuelve read)
+            // hace que el receptor oiga voz "robotizada"/entrecortada.
+            val sendBlock = 320
+            val acc = ShortArray(sendBlock)
+            var accLen = 0
             while (running) {
                 val n = rec.read(buffer, 0, buffer.size)
                 if (n <= 0) continue
@@ -109,28 +115,41 @@ class AudioIO {
                 // Nivel (RMS) para el medidor.
                 onLevel?.invoke(rms(buffer, n))
 
-                if (!isTransmitting) continue
+                if (!isTransmitting) { accLen = 0; continue }
 
                 // Ganancia de captura con clamp + realce de voz.
                 applyGain(buffer, n, captureGain)
                 enhance(buffer, n)
 
-                // Empaquetar a bytes little-endian.
-                val pcm = ByteArray(n * 2)
-                for (i in 0 until n) {
-                    val v = buffer[i].toInt()
-                    pcm[i * 2] = (v and 0xFF).toByte()
-                    pcm[i * 2 + 1] = ((v shr 8) and 0xFF).toByte()
+                // Acumular y emitir en bloques fijos de 320 muestras.
+                var idx = 0
+                while (idx < n) {
+                    val take = minOf(sendBlock - accLen, n - idx)
+                    System.arraycopy(buffer, idx, acc, accLen, take)
+                    accLen += take; idx += take
+                    if (accLen == sendBlock) {
+                        emitBlock(acc, sendBlock)
+                        accLen = 0
+                    }
                 }
-                // Codificar y anteponer 1 byte de códec (compatible con iOS).
-                val payload = codec.encode(pcm)
-                val packet = ByteArray(payload.size + 1)
-                packet[0] = codec.codecId
-                System.arraycopy(payload, 0, packet, 1, payload.size)
-                onCaptured?.invoke(packet, packet.size)
             }
         }
         Log.i(TAG, "AudioIO iniciado (in=$inBufSize out=$outBufSize)")
+    }
+
+    /** Empaqueta un bloque PCM fijo (little-endian), lo codifica y lo emite. */
+    private fun emitBlock(samples: ShortArray, len: Int) {
+        val pcm = ByteArray(len * 2)
+        for (i in 0 until len) {
+            val v = samples[i].toInt()
+            pcm[i * 2] = (v and 0xFF).toByte()
+            pcm[i * 2 + 1] = ((v shr 8) and 0xFF).toByte()
+        }
+        val payload = codec.encode(pcm)
+        val packet = ByteArray(payload.size + 1)
+        packet[0] = codec.codecId
+        System.arraycopy(payload, 0, packet, 1, payload.size)
+        onCaptured?.invoke(packet, packet.size)
     }
 
     fun stop() {
