@@ -17,6 +17,7 @@ object VoiceChannel {
     const val ALARM: Byte = 2
     const val TEXT: Byte = 3
     const val SUBGROUP: Byte = 4
+    const val PRESENCE: Byte = 5   // latido: payload = nombre del rider (radar)
 
     // MARK: - Formato clásico (1 destinatario)
 

@@ -16,6 +16,7 @@ struct NetworkBridgeView: View {
             VStack(spacing: 18) {
                 // PANTALLA PRINCIPAL SIMPLE (uso en moto):
                 statusCard          // estado + iniciar/detener
+                radarCard           // LED de cercanía de cada rider
                 outputCard          // switch Cascos <-> Bocinas (arriba, fácil alcance)
                 pttCard             // botón de hablar + manos libres
                 messageCard         // mensaje escrito leído por voz
@@ -316,6 +317,46 @@ struct NetworkBridgeView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardStyle()
+    }
+
+    // Radar: LED de color por rider según cercanía (saltos de mesh).
+    @ViewBuilder private var radarCard: some View {
+        if controller.isRunning && !controller.riderSignals.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("RADAR DE RIDERS").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                ForEach(controller.riderSignals) { sig in
+                    HStack(spacing: 10) {
+                        Circle()
+                            .fill(ledColor(sig.level))
+                            .frame(width: 16, height: 16)
+                            .shadow(color: ledColor(sig.level).opacity(0.7), radius: 4)
+                        Text(sig.name).font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(ledLabel(sig.level, hops: sig.hops))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Text("🟢 cerca · 🟡 lejos · 🔴 fuera de alcance")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .cardStyle()
+        }
+    }
+
+    private func ledColor(_ level: NetworkBridgeController.RiderSignal.Level) -> Color {
+        switch level {
+        case .near: return .green
+        case .far: return .yellow
+        case .lost: return .red
+        }
+    }
+    private func ledLabel(_ level: NetworkBridgeController.RiderSignal.Level, hops: Int) -> String {
+        switch level {
+        case .near: return "cerca"
+        case .far: return "lejos (\(hops) saltos)"
+        case .lost: return "fuera de alcance"
+        }
     }
 
     // Switch de salida: Cascos (intercom) <-> Bocinas (música de la moto).

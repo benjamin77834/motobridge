@@ -40,17 +40,20 @@ final class MeshRelay {
         let payload: Data          // audio a reproducir (si isNew)
         let isNew: Bool            // ¿procesar/reproducir?
         let relay: Data?           // paquete a reenviar a otros vecinos (o nil)
+        let hops: Int              // saltos que recorrió (0 = directo)
     }
 
     /// Procesa un paquete recibido: decide si reproducirlo y si reenviarlo.
     func processIncoming(_ data: Data) -> Incoming? {
         guard data.count > Self.headerSize else { return nil }
         let (origin, packet, ttl, payload) = Self.unpack(data)
+        // Saltos recorridos = TTL inicial - TTL actual.
+        let hops = max(0, Int(Self.defaultTTL) - Int(ttl))
 
         lock.lock(); defer { lock.unlock() }
         let key = (UInt64(origin) << 32) | UInt64(packet)
         if seen.contains(key) {
-            return Incoming(payload: payload, isNew: false, relay: nil) // ya visto
+            return Incoming(payload: payload, isNew: false, relay: nil, hops: hops) // ya visto
         }
         markSeen(origin: origin, packet: packet)
 
@@ -59,7 +62,7 @@ final class MeshRelay {
         if ttl > 1 {
             relay = Self.pack(origin: origin, packet: packet, ttl: ttl - 1, payload: payload)
         }
-        return Incoming(payload: payload, isNew: true, relay: relay)
+        return Incoming(payload: payload, isNew: true, relay: relay, hops: hops)
     }
 
     private func markSeen(origin: UInt32, packet: UInt32) {

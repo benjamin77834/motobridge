@@ -142,6 +142,58 @@ class BridgeController(context: Context) {
         audio.codec = if (on) runCatching { OpusCodec() }.getOrDefault(PcmCodec()) else PcmCodec()
     }
 
+    // Radar de riders (LED por saltos).
+    data class RiderSignal(val name: String, var hops: Int, var lastSeen: Long) {
+        enum class Level { NEAR, FAR, LOST }
+        fun level(): Level {
+            val age = System.currentTimeMillis() - lastSeen
+            if (age > 7000) return Level.LOST
+            return if (hops <= 1) Level.NEAR else Level.FAR
+        }
+    }
+    var riderSignals by mutableStateOf<List<RiderSignal>>(emptyList())
+        private set
+    private var presenceHandler: android.os.Handler? = null
+    private var presenceRunnable: Runnable? = null
+
+    private fun noteRiderSeen(name: String, hops: Int) {
+        if (name == localName) return
+        val list = riderSignals.toMutableList()
+        val idx = list.indexOfFirst { it.name == name }
+        if (idx >= 0) { list[idx].hops = hops; list[idx].lastSeen = System.currentTimeMillis() }
+        else list.add(RiderSignal(name, hops, System.currentTimeMillis()))
+        riderSignals = list
+    }
+
+    private fun sendPresence() {
+        if (!isRunning || localName.isBlank()) return
+        val payload = localName.toByteArray(Charsets.UTF_8)
+        val channeled = com.motobridge.android.net.VoiceChannel.wrap(payload, com.motobridge.android.net.VoiceChannel.PRESENCE, 0)
+        val toSend = if (meshEnabled) mesh.wrapOutgoing(channeled) else channeled
+        transport.sendAudio(toSend, toSend.size)
+    }
+
+    private fun startPresenceTimer() {
+        stopPresenceTimer()
+        val h = android.os.Handler(android.os.Looper.getMainLooper())
+        presenceHandler = h
+        val r = object : Runnable {
+            override fun run() {
+                if (!isRunning) return
+                sendPresence()
+                riderSignals = riderSignals.toList() // refresca para recalcular LED
+                h.postDelayed(this, 2000)
+            }
+        }
+        presenceRunnable = r
+        h.postDelayed(r, 2000)
+    }
+    private fun stopPresenceTimer() {
+        presenceRunnable?.let { presenceHandler?.removeCallbacks(it) }
+        presenceRunnable = null; presenceHandler = null
+        riderSignals = emptyList()
+    }
+
     /** Relay de malla para extender alcance (compatible con iOS). */
     private val mesh = com.motobridge.android.net.MeshRelay()
     // Desactivado por defecto: solo útil con 3+ motos. Debe estar igual en todos.
@@ -174,13 +226,13 @@ class BridgeController(context: Context) {
             if (meshEnabled) {
                 val inc = mesh.processIncoming(packet)
                 if (inc != null) {
-                    if (inc.isNew) playChanneled(peerId, inc.payload)
+                    if (inc.isNew) playChanneled(peerId, inc.payload, inc.hops)
                     if (peerName != null && peerName!!.contains(",")) {
                         inc.relay?.let { transport.sendAudio(it, it.size) }
                     }
                 }
             } else {
-                playChanneled(peerId, packet)
+                playChanneled(peerId, packet, 0)
             }
         }
         transport.onState = { s -> state = s }
@@ -201,9 +253,14 @@ class BridgeController(context: Context) {
         }
     }
 
-    private fun playChanneled(peerId: String, data: ByteArray) {
+    private fun playChanneled(peerId: String, data: ByteArray, hops: Int = 0) {
         val msg = com.motobridge.android.net.VoiceChannel.unwrap(data)
         if (msg == null) { audio.playFrom(peerId, data); return }
+        if (msg.type == com.motobridge.android.net.VoiceChannel.PRESENCE) {
+            val name = String(msg.audio, Charsets.UTF_8)
+            if (name.isNotBlank()) noteRiderSeen(name, hops)
+            return
+        }
         when (msg.type) {
             com.motobridge.android.net.VoiceChannel.PRIVATE ->
                 if (msg.targetId == myNameId) { noteVoiceActivity(); audio.playFrom(peerId, msg.audio) }
@@ -322,11 +379,13 @@ class BridgeController(context: Context) {
             audio.start()
         }
         remote.start()
+        startPresenceTimer()  // radar: latido de presencia
     }
 
     fun stop() {
         if (!isRunning) return
         isRunning = false
+        stopPresenceTimer()
         remote.stop()
         stopFocusTimer()
         audioFocus = AudioFocusState.MUSIC

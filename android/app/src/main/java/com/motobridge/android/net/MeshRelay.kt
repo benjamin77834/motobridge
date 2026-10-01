@@ -23,7 +23,7 @@ class MeshRelay {
     private val seen = LinkedHashSet<Long>()
     private val maxSeen = 2048
 
-    data class Incoming(val payload: ByteArray, val isNew: Boolean, val relay: ByteArray?)
+    data class Incoming(val payload: ByteArray, val isNew: Boolean, val relay: ByteArray?, val hops: Int = 0)
 
     @Synchronized
     fun wrapOutgoing(payload: ByteArray, ttl: Int = DEFAULT_TTL): ByteArray {
@@ -39,13 +39,14 @@ class MeshRelay {
         val packet = readInt(data, 4)
         val ttl = data[8].toInt() and 0xFF
         val payload = data.copyOfRange(HEADER_SIZE, data.size)
+        val hops = maxOf(0, DEFAULT_TTL - ttl)
 
         val key = (origin.toLong() shl 32) or (packet.toLong() and 0xFFFFFFFFL)
-        if (seen.contains(key)) return Incoming(payload, false, null)
+        if (seen.contains(key)) return Incoming(payload, false, null, hops)
         markSeen(origin, packet)
 
         val relay = if (ttl > 1) pack(origin, packet, ttl - 1, payload) else null
-        return Incoming(payload, true, relay)
+        return Incoming(payload, true, relay, hops)
     }
 
     private fun markSeen(origin: Int, packet: Int) {

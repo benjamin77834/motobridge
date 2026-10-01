@@ -168,6 +168,35 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
         }
     }
 
+    // Radar de riders: LED de color por cercanía
+    if (controller.isRunning && controller.riderSignals.isNotEmpty()) {
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("RADAR DE RIDERS", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                for (sig in controller.riderSignals) {
+                    val lvl = sig.level()
+                    val c = when (lvl) {
+                        BridgeController.RiderSignal.Level.NEAR -> Color(0xFF34C759)
+                        BridgeController.RiderSignal.Level.FAR -> Color(0xFFFFCC00)
+                        BridgeController.RiderSignal.Level.LOST -> Color(0xFFFF3B30)
+                    }
+                    val label = when (lvl) {
+                        BridgeController.RiderSignal.Level.NEAR -> "cerca"
+                        BridgeController.RiderSignal.Level.FAR -> "lejos (${sig.hops} saltos)"
+                        BridgeController.RiderSignal.Level.LOST -> "fuera de alcance"
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(16.dp).clip(CircleShape).background(c))
+                        Spacer(Modifier.width(10.dp))
+                        Text(sig.name, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                        Text(label, fontSize = 12.sp, color = Color.Gray)
+                    }
+                }
+                Text("🟢 cerca · 🟡 lejos · 🔴 fuera de alcance", fontSize = 11.sp, color = Color.Gray)
+            }
+        }
+    }
+
     // Botón grande de HABLAR (verde) + manos libres
     val talking = controller.isTransmitting
     Card(Modifier.fillMaxWidth()) {

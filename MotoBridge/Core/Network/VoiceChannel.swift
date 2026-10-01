@@ -21,6 +21,7 @@ enum VoiceChannelType: UInt8 {
     case alarm = 2            // emergencia: todos lo reproducen con prioridad
     case text = 3             // mensaje escrito: el receptor lo lee por voz (TTS)
     case subgroup = 4         // varios riders elegidos (voz o texto)
+    case presence = 5         // latido: el payload es el nombre del rider (para el radar)
 }
 
 enum VoiceChannel {

@@ -407,6 +407,63 @@ final class NetworkBridgeController: ObservableObject {
         UNUserNotificationCenter.current().add(req)
     }
 
+    // MARK: - Radar de riders (LED por saltos)
+
+    /// Estado de señal de un rider para el "radar": color según cercanía.
+    struct RiderSignal: Identifiable {
+        var id: String { name }
+        let name: String
+        var hops: Int          // saltos (0 = directo/cerca)
+        var lastSeen: Date     // último latido/voz recibido
+        /// Color del LED: verde (cerca), amarillo (lejos), rojo (perdido).
+        enum Level { case near, far, lost }
+        var level: Level {
+            let age = Date().timeIntervalSince(lastSeen)
+            if age > 7 { return .lost }
+            return hops <= 1 ? .near : .far
+        }
+    }
+    @Published private(set) var riderSignals: [RiderSignal] = []
+    private var presenceTimer: Timer?
+
+    /// Registra que se oyó a un rider (por latido o voz) y actualiza su LED.
+    private func noteRiderSeen(_ name: String, hops: Int) {
+        guard name != localName else { return }  // no me cuento a mí
+        DispatchQueue.main.async {
+            if let idx = self.riderSignals.firstIndex(where: { $0.name == name }) {
+                self.riderSignals[idx].hops = hops
+                self.riderSignals[idx].lastSeen = Date()
+            } else {
+                self.riderSignals.append(RiderSignal(name: name, hops: hops, lastSeen: Date()))
+            }
+        }
+    }
+
+    /// Emite un latido de presencia (nombre) para que el radar de los demás nos vea.
+    private func sendPresence() {
+        guard isRunning, !localName.isEmpty, let payload = localName.data(using: .utf8) else { return }
+        let channeled = VoiceChannel.wrap(payload, type: .presence, targetId: 0)
+        let toSend = meshEnabled ? mesh.wrapOutgoing(channeled) : channeled
+        transport.sendAudio(toSend)
+    }
+
+    /// Arranca el latido periódico y la limpieza del radar.
+    private func startPresenceTimer() {
+        presenceTimer?.invalidate()
+        let t = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self, self.isRunning else { return }
+            self.sendPresence()
+            // Refrescar la vista (para que los LED cambien a rojo al expirar).
+            DispatchQueue.main.async { self.riderSignals = self.riderSignals }
+        }
+        RunLoop.main.add(t, forMode: .common)
+        presenceTimer = t
+    }
+    private func stopPresenceTimer() {
+        presenceTimer?.invalidate(); presenceTimer = nil
+        DispatchQueue.main.async { self.riderSignals = [] }
+    }
+
     /// Relay de malla: reenvía audio de otros para extender el alcance.
     private let mesh = MeshRelay()
     /// Activa el reenvío mesh. DESACTIVADO por defecto: solo tiene sentido con
@@ -594,13 +651,13 @@ final class NetworkBridgeController: ObservableObject {
             if self.meshEnabled {
                 guard let incoming = self.mesh.processIncoming(data) else { return }
                 if incoming.isNew {
-                    self.playChanneled(incoming.payload)
+                    self.playChanneled(incoming.payload, hops: incoming.hops)
                 }
                 if let relay = incoming.relay, self.connectedPeers.count > 1 {
                     self.transport.sendAudio(relay)
                 }
             } else {
-                self.playChanneled(data)
+                self.playChanneled(data, hops: 0)   // sin mesh = conexión directa
             }
         }
         t.onStateChange = { [weak self] s in
@@ -636,13 +693,19 @@ final class NetworkBridgeController: ObservableObject {
     /// - grupo: siempre.
     /// - privado: solo si soy el destinatario (modo b: sigo oyendo al grupo).
     /// - alarma: siempre, con prioridad (aviso por voz).
-    private func playChanneled(_ data: Data) {
+    private func playChanneled(_ data: Data, hops: Int = 0) {
         guard let msg = VoiceChannel.unwrap(data) else {
             // Compatibilidad: si no trae cabecera de canal, tratar como grupo.
             audioIO.playReceivedAudio(data)
             return
         }
         switch msg.type {
+        case .presence:
+            // Latido de otro rider para el radar. El payload es su nombre.
+            if let name = String(data: msg.audio, encoding: .utf8), !name.isEmpty {
+                noteRiderSeen(name, hops: hops)
+            }
+            return
         case .group:
             noteVoiceActivity()
             audioIO.playReceivedAudio(msg.audio)
@@ -729,6 +792,7 @@ final class NetworkBridgeController: ObservableObject {
         // El descubrimiento de red arranca de inmediato (barato y seguro en main).
         transport.start()
         remoteControl.start()   // escuchar botones del intercom (Hysnox)
+        startPresenceTimer()    // radar: latido de presencia
         log.info(.bridge, "NetworkBridge iniciado (\(mode.rawValue))")
 
         // Modo CallKit: el audio lo arranca el sistema en onActivateAudio.
@@ -873,6 +937,7 @@ final class NetworkBridgeController: ObservableObject {
         guard isRunning else { return }
         isRunning = false
         remoteControl.stop()
+        stopPresenceTimer()
         stopFocusTimer()
         audioFocus = .music
         setTransmitting(false)
