@@ -247,6 +247,9 @@ class BridgeController(context: Context) {
             }
             knownPeers = newSet
             peerName = name
+            // Radar: sembrar con los peers conectados (verde). El presence refina saltos.
+            for (r in newSet) noteRiderSeen(r, 0)
+            riderSignals = riderSignals.filter { newSet.contains(it.name) }
         }
         transport.onEvent = { line ->
             events = (listOf(timestamp() + " · " + line) + events).take(12)

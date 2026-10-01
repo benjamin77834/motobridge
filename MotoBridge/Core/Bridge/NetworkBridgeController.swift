@@ -428,6 +428,7 @@ final class NetworkBridgeController: ObservableObject {
 
     /// Registra que se oyó a un rider (por latido o voz) y actualiza su LED.
     private func noteRiderSeen(_ name: String, hops: Int) {
+        log.info(.bridge, "RADAR: latido de \"\(name)\" (yo soy \"\(localName)\"), hops=\(hops)")
         guard name != localName else { return }  // no me cuento a mí
         DispatchQueue.main.async {
             if let idx = self.riderSignals.firstIndex(where: { $0.name == name }) {
@@ -679,6 +680,11 @@ final class NetworkBridgeController: ObservableObject {
                 self.knownPeerNames = newNames
                 self.discoveredPeers = discovered
                 self.connectedPeers = connected
+                // Radar: sembrar con los peers conectados (verde) aunque el
+                // latido de presencia aún no llegue. El presence refina los saltos.
+                for peer in connected { self.noteRiderSeen(peer.name, hops: 0) }
+                // Quitar del radar los que ya no están conectados.
+                self.riderSignals.removeAll { sig in !newNames.contains(sig.name) }
             }
         }
         t.onEvent = { [weak self] line in
