@@ -268,7 +268,7 @@ class AudioIO {
             s = bq[1].process(s)  // paso-bajo 3400 Hz
             s = bq[2].process(s)  // presencia 2 kHz
 
-            // Noise gate sobre la señal filtrada.
+            // Noise gate sobre la señal filtrada. Ataque rápido, liberación lenta.
             val mag = kotlin.math.abs(s)
             val gc = if (mag > gateEnv) 0.5f else 0.05f
             gateEnv += (mag - gateEnv) * gc
@@ -277,10 +277,11 @@ class AudioIO {
             gateGain += (target - gateGain) * sm
             s *= gateGain
 
-            // Normalización suave.
+            // Normalización SUAVE: amplifica como mucho 1.8× (antes 3×, que
+            // levantaba el ruido de fondo y producía "gis"/estática).
             val coeff = if (mag > env) 0.4f else 0.02f
             env += (mag - env) * coeff
-            if (env > 0.0001f) s *= kotlin.math.min(3.0f, 0.4f / env)
+            if (env > 0.0005f) s *= kotlin.math.min(1.8f, 0.4f / env)
 
             s = s.coerceIn(-1f, 1f)
             samples[i] = (s * 32767f).toInt().toShort()
