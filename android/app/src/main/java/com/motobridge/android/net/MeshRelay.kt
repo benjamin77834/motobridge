@@ -12,7 +12,9 @@ import kotlin.random.Random
 class MeshRelay {
     companion object {
         const val HEADER_SIZE = 9
-        const val DEFAULT_TTL: Int = 3
+        // Saltos máximos del mesh. 6 permite caravanas más largas (hasta ~6 motos
+        // encadenadas repitiendo la señal). Debe ser igual en iOS y Android.
+        const val DEFAULT_TTL: Int = 6
     }
 
     val localOriginId: Int = Random.nextInt(1, Int.MAX_VALUE)

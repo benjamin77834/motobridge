@@ -13,7 +13,9 @@ import Foundation
 /// bucles y reenvíos duplicados en la malla.
 final class MeshRelay {
     static let headerSize = 9
-    static let defaultTTL: UInt8 = 3
+    /// Saltos máximos del mesh. 6 permite caravanas más largas (hasta ~6 motos
+    /// encadenadas repitiendo la señal). Debe ser igual en iOS y Android.
+    static let defaultTTL: UInt8 = 6
 
     /// ID de este dispositivo (aleatorio por sesión).
     let localOriginId: UInt32 = UInt32.random(in: 1...UInt32.max)
