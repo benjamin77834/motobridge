@@ -48,6 +48,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.motobridge.app.watchkitapp
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_WKApplication: YES  # app de Watch SwiftUI independiente (watchOS 9+)
         INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.motobridge.app
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         TARGETED_DEVICE_FAMILY: "4" # Apple Watch
