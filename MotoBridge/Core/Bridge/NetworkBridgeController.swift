@@ -24,8 +24,12 @@ final class NetworkBridgeController: ObservableObject {
     private let log = Logger.shared
     private var cancellables = Set<AnyCancellable>()
 
-    /// Transporte activo (según el modo).
+    /// Transporte activo (según el modo). En modo gateway es el Multipeer.
     private var transport: AudioTransport
+
+    /// Segundo transporte, SOLO en modo gateway: el Universal (Android/WiFi).
+    /// En gateway corren los dos a la vez y este objeto traduce entre ambos.
+    private var gatewayTransport: AudioTransport?
 
     /// Modo de transporte. No se puede cambiar mientras el bridge corre.
     @Published private(set) var mode: TransportMode = .apple
@@ -332,6 +336,8 @@ final class NetworkBridgeController: ObservableObject {
             }
             let toSend = self.meshEnabled ? self.mesh.wrapOutgoing(channeled) : channeled
             self.transport.sendAudio(toSend)
+            // En modo puente, mi voz también sale por el otro transporte (Android).
+            self.gatewayTransport?.sendAudio(toSend)
             DispatchQueue.main.async {
                 self.packetsSent += 1
                 if self.packetsSent % 20 == 1 {
@@ -446,6 +452,7 @@ final class NetworkBridgeController: ObservableObject {
         let channeled = VoiceChannel.wrap(payload, type: .presence, targetId: 0)
         let toSend = meshEnabled ? mesh.wrapOutgoing(channeled) : channeled
         transport.sendAudio(toSend)
+        gatewayTransport?.sendAudio(toSend)   // modo puente: también al lado Android
     }
 
     /// Arranca el latido periódico y la limpieza del radar.
@@ -660,6 +667,8 @@ final class NetworkBridgeController: ObservableObject {
             } else {
                 self.playChanneled(data, hops: 0)   // sin mesh = conexión directa
             }
+            // En modo puente, reenviar al lado Android lo que llega de los iPhones.
+            self.gatewayTransport?.sendAudio(data)
         }
         t.onStateChange = { [weak self] s in
             DispatchQueue.main.async {
@@ -693,6 +702,40 @@ final class NetworkBridgeController: ObservableObject {
                 if let count = self?.events.count, count > 12 { self?.events.removeLast() }
             }
         }
+    }
+
+    /// Conecta el SEGUNDO transporte en modo puente (gateway). El audio que llega
+    /// por aquí (del Android/WiFi) se reproduce localmente Y se reenvía por el
+    /// transporte principal (Multipeer) para que los iPhones lo oigan.
+    private func wireGatewayTransport(_ t: AudioTransport) {
+        t.onAudioData = { [weak self] data in
+            guard let self else { return }
+            // Reproducir localmente lo que viene del Android.
+            if self.meshEnabled {
+                if let incoming = self.mesh.processIncoming(data) {
+                    if incoming.isNew { self.playChanneled(incoming.payload, hops: incoming.hops) }
+                }
+            } else {
+                self.playChanneled(data, hops: 0)
+            }
+            // Reenviar al lado Apple (Multipeer) para que los iPhones lo oigan.
+            self.transport.sendAudio(data)
+        }
+        // El estado/eventos del lado Android se registran como eventos de puente.
+        t.onEvent = { [weak self] line in
+            DispatchQueue.main.async {
+                self?.events.insert("[Android] " + line, at: 0)
+                if let count = self?.events.count, count > 12 { self?.events.removeLast() }
+            }
+        }
+        t.onPeersChange = { [weak self] _, connected in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                // Sembrar el radar con los riders Android conectados por el puente.
+                for peer in connected { self.noteRiderSeen(peer.name, hops: 0) }
+            }
+        }
+        t.onStateChange = { _ in }   // el estado visible lo lleva el transporte Apple
     }
 
     /// Desenvuelve el canal y decide si reproducir según el tipo:
@@ -770,13 +813,20 @@ final class NetworkBridgeController: ObservableObject {
     func setMode(_ newMode: TransportMode) {
         guard !isRunning, newMode != mode else { return }
         mode = newMode
+        gatewayTransport = nil
         switch newMode {
         case .apple:
             transport = peer
         case .universal:
             transport = LocalNetworkTransport()
+        case .gateway:
+            // Puente: Multipeer (Apple) como transporte principal + Universal
+            // (Android/WiFi) como secundario. Se traducen entre sí.
+            transport = peer
+            gatewayTransport = LocalNetworkTransport()
         }
         wireTransport(transport)
+        if let gw = gatewayTransport { wireGatewayTransport(gw) }
         // Reset de estado visible.
         state = .notConnected
         discoveredPeers = []
@@ -797,6 +847,7 @@ final class NetworkBridgeController: ObservableObject {
         isRunning = true
         // El descubrimiento de red arranca de inmediato (barato y seguro en main).
         transport.start()
+        gatewayTransport?.start()   // modo puente: también el lado Android/WiFi
         remoteControl.start()   // escuchar botones del intercom (Hysnox)
         startPresenceTimer()    // radar: latido de presencia
         log.info(.bridge, "NetworkBridge iniciado (\(mode.rawValue))")
@@ -949,6 +1000,7 @@ final class NetworkBridgeController: ObservableObject {
         setTransmitting(false)
         knownPeerNames.removeAll()
         transport.stop()
+        gatewayTransport?.stop()   // modo puente: parar también el lado Android
         if useCallKit {
             CallKitManager.shared.endCall()
         }
