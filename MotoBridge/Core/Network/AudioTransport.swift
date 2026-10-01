@@ -15,6 +15,15 @@ enum TransportMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Nombre corto para botones (la GUI con 3 modos no cabe con el nombre largo).
+    var shortName: String {
+        switch self {
+        case .apple: return "Apple"
+        case .universal: return "Android"
+        case .gateway: return "Puente"
+        }
+    }
+
     var explanation: String {
         switch self {
         case .apple:

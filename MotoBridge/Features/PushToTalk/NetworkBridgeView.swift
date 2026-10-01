@@ -624,16 +624,20 @@ struct NetworkBridgeView: View {
     private var modeSelectorCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("2. Modo de conexión").font(.headline)
-            Picker("Modo", selection: Binding(
-                get: { controller.mode },
-                set: { controller.setMode($0) }
-            )) {
+            HStack(spacing: 8) {
                 ForEach(TransportMode.allCases) { m in
-                    Text(m.rawValue).tag(m)
+                    Button {
+                        controller.setMode(m)
+                    } label: {
+                        Text(m.shortName)
+                            .font(.subheadline.weight(.bold))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(controller.mode == m ? .green : .gray)
+                    .disabled(controller.isRunning)
                 }
             }
-            .pickerStyle(.segmented)
-            .disabled(controller.isRunning)
 
             Text(controller.mode.explanation)
                 .font(.caption).foregroundStyle(.secondary)
