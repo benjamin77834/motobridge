@@ -1181,8 +1181,10 @@ final class NetworkBridgeController: ObservableObject {
                 mode: .voiceChat,
                 options: options
             )
+            // Buffer IO corto para menos latencia (captura + reproducción).
+            try? audioSession.setPreferredIOBufferDuration(0.01) // ~10 ms
             try audioSession.setActive(true, options: [])
-            log.info(.audioSession, "AudioSession lista (coexistir=\(coexistWithOtherAudio))")
+            log.info(.audioSession, "AudioSession lista (coexistir=\(coexistWithOtherAudio), IOBuf=\(String(format: "%.1fms", audioSession.ioBufferDuration*1000)))")
         } catch {
             log.error(.audioSession, "Error configurando AudioSession: \(error.localizedDescription)")
         }

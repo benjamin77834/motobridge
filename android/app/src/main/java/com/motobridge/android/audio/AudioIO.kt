@@ -190,8 +190,10 @@ class AudioIO {
         val n = bytes.size / 2
         if (n == 0) return
         val q = peerQueues.getOrPut(peerId) { java.util.concurrent.ConcurrentLinkedQueue() }
-        // Limitar la cola para no acumular latencia (descarta lo viejo si crece).
-        if (q.size > mixBlock * 10) repeat(n) { q.poll() }
+        // Limitar la cola para MINIMIZAR latencia: máx ~3 bloques (60 ms). Si
+        // crece más, descartar lo viejo (preferimos audio reciente a bajo retardo).
+        val maxQueue = mixBlock * 3
+        while (q.size > maxQueue) q.poll()
         for (i in 0 until n) {
             val lo = bytes[i * 2].toInt() and 0xFF
             val hi = bytes[i * 2 + 1].toInt()
