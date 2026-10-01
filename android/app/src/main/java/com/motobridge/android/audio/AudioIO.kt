@@ -190,9 +190,11 @@ class AudioIO {
             while (running) {
                 java.util.Arrays.fill(mix, 0)
                 var anyData = false
-                // Sumar un bloque de cada peer.
+                // Sumar un bloque de cada peer, SOLO si tiene un bloque completo.
+                // Consumir colas con menos de mixBlock mete silencios → audio
+                // entrecortado y "lento". Esperamos a que se acumule el bloque.
                 for (q in peerQueues.values) {
-                    if (q.isEmpty()) continue
+                    if (q.size < mixBlock) continue   // aún no hay bloque completo
                     anyData = true
                     for (i in 0 until mixBlock) {
                         val s = q.poll() ?: 0
