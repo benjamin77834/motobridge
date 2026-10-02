@@ -29,8 +29,9 @@ class AudioIO {
     /** Nivel de entrada 0.0–1.0 para el medidor visual. */
     var onLevel: ((Float) -> Unit)? = null
 
-    /** Ganancias digitales (equivalentes a iOS). */
-    @Volatile var captureGain: Float = 3.0f
+    /** Ganancias digitales (equivalentes a iOS). Captura baja por defecto para
+     *  no saturar el micrófono (micrófonos de gama baja meten gis al amplificar). */
+    @Volatile var captureGain: Float = 1.5f
     @Volatile var outputGain: Float = 1.0f
 
     /** Push-to-talk: solo se envía si está en true. */
@@ -249,8 +250,9 @@ class AudioIO {
     // --- Realce de voz (equivalente al VoiceEnhancer de iOS) ---
     // Filtro paso-banda de voz (300–3400 Hz) + realce + noise gate + normalización.
     @Volatile var voiceEnhancementEnabled: Boolean = true
-    /** Umbral del noise gate (0..0.1). Sube para cortar música/ruido de fondo. */
-    @Volatile var gateThreshold: Float = 0.015f
+    /** Umbral del noise gate (0..0.1). Sube para cortar música/ruido de fondo.
+     *  Un poco alto por defecto para silenciar el ruido del micrófono entre palabras. */
+    @Volatile var gateThreshold: Float = 0.02f
 
     private var biquads: Array<Biquad>? = null
     private var env = 0f
@@ -290,6 +292,7 @@ class AudioIO {
             s = bq[2].process(s)  // presencia 2 kHz
 
             // Noise gate sobre la señal filtrada. Ataque rápido, liberación lenta.
+            // Corta el ruido de fondo entre palabras (principal fuente de "gis").
             val mag = kotlin.math.abs(s)
             val gc = if (mag > gateEnv) 0.5f else 0.05f
             gateEnv += (mag - gateEnv) * gc
@@ -298,11 +301,9 @@ class AudioIO {
             gateGain += (target - gateGain) * sm
             s *= gateGain
 
-            // Normalización SUAVE: amplifica como mucho 1.8× (antes 3×, que
-            // levantaba el ruido de fondo y producía "gis"/estática).
-            val coeff = if (mag > env) 0.4f else 0.02f
-            env += (mag - env) * coeff
-            if (env > 0.0005f) s *= kotlin.math.min(1.8f, 0.4f / env)
+            // SIN normalización: amplificar los tramos bajos levantaba el ruido
+            // del micrófono y producía "gis"/estática. Dejamos el volumen natural;
+            // el usuario sube el "Volumen de escucha" si hace falta más fuerte.
 
             s = s.coerceIn(-1f, 1f)
             samples[i] = (s * 32767f).toInt().toShort()

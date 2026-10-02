@@ -35,7 +35,7 @@ class BridgeController(context: Context) {
     var events by mutableStateOf(listOf<String>()); private set
 
     // Estado observable para los sliders de Compose.
-    var micGain by mutableStateOf(3.0f)
+    var micGain by mutableStateOf(1.5f)   // baja por defecto: evita saturar y meter gis
         private set
     var speakerGain by mutableStateOf(1.0f)
         private set
