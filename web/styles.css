@@ -137,3 +137,8 @@ a{color:inherit;text-decoration:none}
   .carousel-item{width:78vw}
   .carousel-item video{width:78vw;height:auto;aspect-ratio:9/16}
 }
+
+/* Precio de lanzamiento */
+.launch-badge{display:inline-block;background:var(--orange);color:#3a1a00;font-weight:800;font-size:12px;padding:6px 14px;border-radius:999px;margin-bottom:12px}
+.price-row{display:flex;align-items:baseline;justify-content:center;gap:12px;margin:6px 0}
+.price-old{font-size:26px;font-weight:700;color:var(--muted);text-decoration:line-through;opacity:.8}
