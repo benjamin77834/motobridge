@@ -22,3 +22,7 @@ android/keystore/
 
 # Node (por si acaso)
 node_modules/
+
+# Xcode: datos de usuario (no versionar), pero SÍ el .xcodeproj para Xcode Cloud
+*.xcodeproj/**/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/

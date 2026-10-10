@@ -1,0 +1,703 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		002724A472D68AD28F8A2195 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14569E9F3FF76A9725C03102 /* WatchBridge.swift */; };
+		28903BF099EABBC9505D341E /* AppIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = D73608A31D00D54C0275CF7A /* AppIcon.svg */; };
+		2A171020DEB4ECE9077F65F7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C42EBC7A7DBE2293B9D5EBE /* AppState.swift */; };
+		2E10B7482E88FAB1E3158A7B /* AudioBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707A2E8A53190514E043717E /* AudioBridge.swift */; };
+		2F8AB49CA8FC2F34725AD4B1 /* OpusCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC21EBD18C639E527A56D797 /* OpusCodec.swift */; };
+		402DEBD572A183B00DABA53A /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55BF19FCFE50A747E7C04C5B /* AudioSessionManager.swift */; };
+		4139839F9CA39BFF4CE9B3A5 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E0A81559B8E2835AE5F780 /* SettingsView.swift */; };
+		551D13D3C201F1815B6D078F /* LocalNetworkTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F58EC3B8B3DA3607714FBB1 /* LocalNetworkTransport.swift */; };
+		5B6E1981AF6CDC100004C22B /* PeerBridgeSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 168F2607A0C6C75F9A54514A /* PeerBridgeSession.swift */; };
+		6EA3F4C9BE04F70D8039C707 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00398E2CF63EB430C40CA29 /* DashboardView.swift */; };
+		72F5D40344BE88A28FBC6356 /* MotoBridgeIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF01898A30F24B8F72F05CF7 /* MotoBridgeIntents.swift */; };
+		7A2337F6902A973C7659606D /* RemoteControlManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59ADA87FF916BF8D514DE639 /* RemoteControlManager.swift */; };
+		7D24130E22540C70E52D7195 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C5059A7A9A5DD05947BACC5 /* Assets.xcassets */; };
+		89DB8051D90B9BB7AA5A6478 /* IntercomDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DFB6FCF0D1AE67FB56C4653 /* IntercomDevice.swift */; };
+		8D22C5026EA644FB635B06B8 /* VoiceChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */; };
+		A5368E58837BF2A32D982652 /* NetworkBridgeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */; };
+		A8BF4C9B3F31E1637E9B5FE5 /* VoiceEnhancer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC83DDBF5548389BC949696 /* VoiceEnhancer.swift */; };
+		B1A3C275B88ED8EF5CF3783D /* AudioBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106FAF4B343CB07D8D4C874A /* AudioBridgeTests.swift */; };
+		B92E5E72E331404C242E96F6 /* AudioTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47FAFD435FA35518B85EB99B /* AudioTransport.swift */; };
+		BB3AB2390E656EF8DC3239DE /* MeshRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */; };
+		C05F1887ED16D7E685C51B6E /* CallKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E30CBE0D99AAA8BB74D3E37 /* CallKitManager.swift */; };
+		D03330360E1BB3E99C824D32 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 288B6115B720CFEF4733A7CD /* Logger.swift */; };
+		D7369E4CA10188A5A12EE763 /* Opus in Frameworks */ = {isa = PBXBuildFile; productRef = 8DB3C465C966D433BD6CE562 /* Opus */; };
+		E4D0BF35115C81F2DE626EF8 /* AudioIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C62488C8C39EC93531E9631 /* AudioIO.swift */; };
+		EB24E461E93390F52E50FBB3 /* NetworkBridgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77EDDAC5C8DBFCF68787123D /* NetworkBridgeView.swift */; };
+		F10C05F658292D4F36E50017 /* MotoBridgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07ECC8C3E436BEB17E9E4788 /* MotoBridgeApp.swift */; };
+		FAD8692B4B16EE3182DA3F2C /* AudioCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2826E967233D3C971337E9F8 /* AudioCodec.swift */; };
+		FCD46F9BE95DF232B985586B /* IntercomDevices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C359167A3F55301A01A436B /* IntercomDevices.swift */; };
+		FD2DCFEED3E9401F9ACB26C0 /* AudioDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD17445A42748BADDC08595 /* AudioDiagnosticsView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0F99B44A9277A085EBDBA8FD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5C34E6F113A1CC728863DA76 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 52F74A5193C83E08514C4F6B;
+			remoteInfo = MotoBridge;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		04F61816098242C272FE1BA1 /* MotoBridgeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MotoBridgeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		06E0A81559B8E2835AE5F780 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		07ECC8C3E436BEB17E9E4788 /* MotoBridgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotoBridgeApp.swift; sourceTree = "<group>"; };
+		0CC83DDBF5548389BC949696 /* VoiceEnhancer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceEnhancer.swift; sourceTree = "<group>"; };
+		106FAF4B343CB07D8D4C874A /* AudioBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBridgeTests.swift; sourceTree = "<group>"; };
+		14569E9F3FF76A9725C03102 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
+		168F2607A0C6C75F9A54514A /* PeerBridgeSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerBridgeSession.swift; sourceTree = "<group>"; };
+		1F58EC3B8B3DA3607714FBB1 /* LocalNetworkTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNetworkTransport.swift; sourceTree = "<group>"; };
+		236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshRelay.swift; sourceTree = "<group>"; };
+		2826E967233D3C971337E9F8 /* AudioCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCodec.swift; sourceTree = "<group>"; };
+		288B6115B720CFEF4733A7CD /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		2ADA7F7E767C932537748638 /* MotoBridge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MotoBridge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3DFB6FCF0D1AE67FB56C4653 /* IntercomDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntercomDevice.swift; sourceTree = "<group>"; };
+		47FAFD435FA35518B85EB99B /* AudioTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTransport.swift; sourceTree = "<group>"; };
+		55BF19FCFE50A747E7C04C5B /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
+		59ADA87FF916BF8D514DE639 /* RemoteControlManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteControlManager.swift; sourceTree = "<group>"; };
+		5C5059A7A9A5DD05947BACC5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		6C359167A3F55301A01A436B /* IntercomDevices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntercomDevices.swift; sourceTree = "<group>"; };
+		6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceChannel.swift; sourceTree = "<group>"; };
+		6C42EBC7A7DBE2293B9D5EBE /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		707A2E8A53190514E043717E /* AudioBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBridge.swift; sourceTree = "<group>"; };
+		77EDDAC5C8DBFCF68787123D /* NetworkBridgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeView.swift; sourceTree = "<group>"; };
+		80CF211F3BDA6713A45C7216 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeController.swift; sourceTree = "<group>"; };
+		9C62488C8C39EC93531E9631 /* AudioIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioIO.swift; sourceTree = "<group>"; };
+		9E30CBE0D99AAA8BB74D3E37 /* CallKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallKitManager.swift; sourceTree = "<group>"; };
+		BF01898A30F24B8F72F05CF7 /* MotoBridgeIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotoBridgeIntents.swift; sourceTree = "<group>"; };
+		D00398E2CF63EB430C40CA29 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		D73608A31D00D54C0275CF7A /* AppIcon.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = AppIcon.svg; sourceTree = "<group>"; };
+		DC21EBD18C639E527A56D797 /* OpusCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCodec.swift; sourceTree = "<group>"; };
+		FFD17445A42748BADDC08595 /* AudioDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDiagnosticsView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		367EFEC28F4C056453C8B143 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D7369E4CA10188A5A12EE763 /* Opus in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0F49FD9DCCC6B32EC464FDF6 /* MotoBridgeTests */ = {
+			isa = PBXGroup;
+			children = (
+				106FAF4B343CB07D8D4C874A /* AudioBridgeTests.swift */,
+			);
+			path = MotoBridgeTests;
+			sourceTree = "<group>";
+		};
+		1D1920C7A0CC1188A48D98FF /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				D00398E2CF63EB430C40CA29 /* DashboardView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		205E89142CAFD017B3080740 /* PushToTalk */ = {
+			isa = PBXGroup;
+			children = (
+				77EDDAC5C8DBFCF68787123D /* NetworkBridgeView.swift */,
+			);
+			path = PushToTalk;
+			sourceTree = "<group>";
+		};
+		27DB9EE2F82BC98917BF1EDD /* Diagnostics */ = {
+			isa = PBXGroup;
+			children = (
+				288B6115B720CFEF4733A7CD /* Logger.swift */,
+			);
+			path = Diagnostics;
+			sourceTree = "<group>";
+		};
+		2A02EC0B2868C64418210DC8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2ADA7F7E767C932537748638 /* MotoBridge.app */,
+				04F61816098242C272FE1BA1 /* MotoBridgeTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		334E8D9FFB00B551709B5C01 = {
+			isa = PBXGroup;
+			children = (
+				731D43447BDEF6F12CEB4F97 /* MotoBridge */,
+				0F49FD9DCCC6B32EC464FDF6 /* MotoBridgeTests */,
+				2A02EC0B2868C64418210DC8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4C695867800FD57B4B5D60C1 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				D73608A31D00D54C0275CF7A /* AppIcon.svg */,
+				5C5059A7A9A5DD05947BACC5 /* Assets.xcassets */,
+				80CF211F3BDA6713A45C7216 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		66C9C9F1DCEA4F12CFC3E0ED /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				6C42EBC7A7DBE2293B9D5EBE /* AppState.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		70A21E15DE180F5CDF35F15A /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				3DFB6FCF0D1AE67FB56C4653 /* IntercomDevice.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		731D43447BDEF6F12CEB4F97 /* MotoBridge */ = {
+			isa = PBXGroup;
+			children = (
+				8517C28597B339BCF63EF666 /* App */,
+				F8194317C8BE2DFE808CF62E /* Core */,
+				9FBD150F978415FF84FB15C9 /* Features */,
+				70A21E15DE180F5CDF35F15A /* Models */,
+				4C695867800FD57B4B5D60C1 /* Resources */,
+				66C9C9F1DCEA4F12CFC3E0ED /* Services */,
+			);
+			path = MotoBridge;
+			sourceTree = "<group>";
+		};
+		8517C28597B339BCF63EF666 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				07ECC8C3E436BEB17E9E4788 /* MotoBridgeApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		96F8D24B18792EEBB7C46B93 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				47FAFD435FA35518B85EB99B /* AudioTransport.swift */,
+				1F58EC3B8B3DA3607714FBB1 /* LocalNetworkTransport.swift */,
+				236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */,
+				168F2607A0C6C75F9A54514A /* PeerBridgeSession.swift */,
+				6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		9887B7AE10B22D17F9299C01 /* Diagnostics */ = {
+			isa = PBXGroup;
+			children = (
+				FFD17445A42748BADDC08595 /* AudioDiagnosticsView.swift */,
+			);
+			path = Diagnostics;
+			sourceTree = "<group>";
+		};
+		99DC054997CB9CFE0F40EBEF /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				2826E967233D3C971337E9F8 /* AudioCodec.swift */,
+				9C62488C8C39EC93531E9631 /* AudioIO.swift */,
+				55BF19FCFE50A747E7C04C5B /* AudioSessionManager.swift */,
+				DC21EBD18C639E527A56D797 /* OpusCodec.swift */,
+				0CC83DDBF5548389BC949696 /* VoiceEnhancer.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		9DF7D4223F2A3C8CDEA278FE /* Bridge */ = {
+			isa = PBXGroup;
+			children = (
+				707A2E8A53190514E043717E /* AudioBridge.swift */,
+				86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */,
+			);
+			path = Bridge;
+			sourceTree = "<group>";
+		};
+		9EE1A17A757AC4E92CBAC7B9 /* Devices */ = {
+			isa = PBXGroup;
+			children = (
+				6C359167A3F55301A01A436B /* IntercomDevices.swift */,
+			);
+			path = Devices;
+			sourceTree = "<group>";
+		};
+		9FBD150F978415FF84FB15C9 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				1D1920C7A0CC1188A48D98FF /* Dashboard */,
+				9887B7AE10B22D17F9299C01 /* Diagnostics */,
+				205E89142CAFD017B3080740 /* PushToTalk */,
+				AB4E572015EF8CAE87783377 /* Settings */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		AB4E572015EF8CAE87783377 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				06E0A81559B8E2835AE5F780 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		E32BB35BFBE756096487C1A1 /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				14569E9F3FF76A9725C03102 /* WatchBridge.swift */,
+			);
+			path = Watch;
+			sourceTree = "<group>";
+		};
+		E41CDC67DCA7E3E43434F4CB /* Voice */ = {
+			isa = PBXGroup;
+			children = (
+				9E30CBE0D99AAA8BB74D3E37 /* CallKitManager.swift */,
+				BF01898A30F24B8F72F05CF7 /* MotoBridgeIntents.swift */,
+				59ADA87FF916BF8D514DE639 /* RemoteControlManager.swift */,
+			);
+			path = Voice;
+			sourceTree = "<group>";
+		};
+		F8194317C8BE2DFE808CF62E /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				99DC054997CB9CFE0F40EBEF /* Audio */,
+				9DF7D4223F2A3C8CDEA278FE /* Bridge */,
+				9EE1A17A757AC4E92CBAC7B9 /* Devices */,
+				27DB9EE2F82BC98917BF1EDD /* Diagnostics */,
+				96F8D24B18792EEBB7C46B93 /* Network */,
+				E41CDC67DCA7E3E43434F4CB /* Voice */,
+				E32BB35BFBE756096487C1A1 /* Watch */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		52F74A5193C83E08514C4F6B /* MotoBridge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B0FA963EA915E75A3D9CA5 /* Build configuration list for PBXNativeTarget "MotoBridge" */;
+			buildPhases = (
+				593CCF0E571CABFF16727411 /* Sources */,
+				C14408AA5B8A263183993DF7 /* Resources */,
+				367EFEC28F4C056453C8B143 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MotoBridge;
+			packageProductDependencies = (
+				8DB3C465C966D433BD6CE562 /* Opus */,
+			);
+			productName = MotoBridge;
+			productReference = 2ADA7F7E767C932537748638 /* MotoBridge.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E66864FF295E7A63DDB2C123 /* MotoBridgeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 53CE02129F067D155BABA727 /* Build configuration list for PBXNativeTarget "MotoBridgeTests" */;
+			buildPhases = (
+				09089616562743BEAF868EA9 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9477C6EE2B5CA8A9F7187596 /* PBXTargetDependency */,
+			);
+			name = MotoBridgeTests;
+			packageProductDependencies = (
+			);
+			productName = MotoBridgeTests;
+			productReference = 04F61816098242C272FE1BA1 /* MotoBridgeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5C34E6F113A1CC728863DA76 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					52F74A5193C83E08514C4F6B = {
+						ProvisioningStyle = Automatic;
+					};
+					E66864FF295E7A63DDB2C123 = {
+						DevelopmentTeam = 48V68SFH7Q;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 48C488C2FAC1609CDF06ABD3 /* Build configuration list for PBXProject "MotoBridge" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 334E8D9FFB00B551709B5C01;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BDFD341C6AC648190874A34B /* XCRemoteSwiftPackageReference "swift-opus" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 2A02EC0B2868C64418210DC8 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				52F74A5193C83E08514C4F6B /* MotoBridge */,
+				E66864FF295E7A63DDB2C123 /* MotoBridgeTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C14408AA5B8A263183993DF7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				28903BF099EABBC9505D341E /* AppIcon.svg in Resources */,
+				7D24130E22540C70E52D7195 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		09089616562743BEAF868EA9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1A3C275B88ED8EF5CF3783D /* AudioBridgeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		593CCF0E571CABFF16727411 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2A171020DEB4ECE9077F65F7 /* AppState.swift in Sources */,
+				2E10B7482E88FAB1E3158A7B /* AudioBridge.swift in Sources */,
+				FAD8692B4B16EE3182DA3F2C /* AudioCodec.swift in Sources */,
+				FD2DCFEED3E9401F9ACB26C0 /* AudioDiagnosticsView.swift in Sources */,
+				E4D0BF35115C81F2DE626EF8 /* AudioIO.swift in Sources */,
+				402DEBD572A183B00DABA53A /* AudioSessionManager.swift in Sources */,
+				B92E5E72E331404C242E96F6 /* AudioTransport.swift in Sources */,
+				C05F1887ED16D7E685C51B6E /* CallKitManager.swift in Sources */,
+				6EA3F4C9BE04F70D8039C707 /* DashboardView.swift in Sources */,
+				89DB8051D90B9BB7AA5A6478 /* IntercomDevice.swift in Sources */,
+				FCD46F9BE95DF232B985586B /* IntercomDevices.swift in Sources */,
+				551D13D3C201F1815B6D078F /* LocalNetworkTransport.swift in Sources */,
+				D03330360E1BB3E99C824D32 /* Logger.swift in Sources */,
+				BB3AB2390E656EF8DC3239DE /* MeshRelay.swift in Sources */,
+				F10C05F658292D4F36E50017 /* MotoBridgeApp.swift in Sources */,
+				72F5D40344BE88A28FBC6356 /* MotoBridgeIntents.swift in Sources */,
+				A5368E58837BF2A32D982652 /* NetworkBridgeController.swift in Sources */,
+				EB24E461E93390F52E50FBB3 /* NetworkBridgeView.swift in Sources */,
+				2F8AB49CA8FC2F34725AD4B1 /* OpusCodec.swift in Sources */,
+				5B6E1981AF6CDC100004C22B /* PeerBridgeSession.swift in Sources */,
+				7A2337F6902A973C7659606D /* RemoteControlManager.swift in Sources */,
+				4139839F9CA39BFF4CE9B3A5 /* SettingsView.swift in Sources */,
+				8D22C5026EA644FB635B06B8 /* VoiceChannel.swift in Sources */,
+				A8BF4C9B3F31E1637E9B5FE5 /* VoiceEnhancer.swift in Sources */,
+				002724A472D68AD28F8A2195 /* WatchBridge.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9477C6EE2B5CA8A9F7187596 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 52F74A5193C83E08514C4F6B /* MotoBridge */;
+			targetProxy = 0F99B44A9277A085EBDBA8FD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0549B59C30B211CE77F64FAB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 48V68SFH7Q;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MotoBridge/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.monkeyfon;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		2478D2FBB1A79F33AF38661F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 48V68SFH7Q;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		D9CAB859778CF1CA163EF8B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 48V68SFH7Q;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MotoBridge/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.monkeyfon;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E3A9127459124CF579DBF2FD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.tests.monkeyfon;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MotoBridge.app/MotoBridge";
+			};
+			name = Release;
+		};
+		F293E03CED684FD38B05B548 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.tests.monkeyfon;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MotoBridge.app/MotoBridge";
+			};
+			name = Debug;
+		};
+		FD97AF31362D17CD6139B076 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 48V68SFH7Q;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		48C488C2FAC1609CDF06ABD3 /* Build configuration list for PBXProject "MotoBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FD97AF31362D17CD6139B076 /* Debug */,
+				2478D2FBB1A79F33AF38661F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		53CE02129F067D155BABA727 /* Build configuration list for PBXNativeTarget "MotoBridgeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F293E03CED684FD38B05B548 /* Debug */,
+				E3A9127459124CF579DBF2FD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A1B0FA963EA915E75A3D9CA5 /* Build configuration list for PBXNativeTarget "MotoBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0549B59C30B211CE77F64FAB /* Debug */,
+				D9CAB859778CF1CA163EF8B9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BDFD341C6AC648190874A34B /* XCRemoteSwiftPackageReference "swift-opus" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/alta/swift-opus.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8DB3C465C966D433BD6CE562 /* Opus */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BDFD341C6AC648190874A34B /* XCRemoteSwiftPackageReference "swift-opus" */;
+			productName = Opus;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 5C34E6F113A1CC728863DA76 /* Project object */;
+}
