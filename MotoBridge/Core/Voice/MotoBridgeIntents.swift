@@ -126,7 +126,7 @@ struct OutputSpeakersIntent: AppIntent {
 @available(iOS 16.0, *)
 struct ToggleMusicIntent: AppIntent {
     static var title: LocalizedStringResource = "Música play o pausa"
-    static var description = IntentDescription("Reproduce o pausa la música (Spotify/Apple Music).")
+    static var description = IntentDescription("Reproduce o pausa la música que esté sonando.")
     static var openAppWhenRun: Bool = false
 
     @MainActor
