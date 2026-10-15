@@ -407,7 +407,7 @@ struct NetworkBridgeView: View {
 
             Text(controller.autoMusicMode
                  ? "En modo automático la salida cambia sola al hablar."
-                 : "Cascos = intercom con micrófono. Bocinas = música de la moto (CarPlay). El botón de música controla Spotify/Apple Music sin salir de la app.")
+                 : "Cascos = intercom con micrófono. Bocinas = música de la moto (CarPlay). El botón de música reproduce o pausa lo que esté sonando.")
                 .font(.caption2).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
