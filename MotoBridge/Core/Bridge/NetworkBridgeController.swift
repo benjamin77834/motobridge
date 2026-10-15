@@ -967,9 +967,36 @@ final class NetworkBridgeController: ObservableObject {
             } catch {
                 self.log.error(.audioRoute, "No se pudo fijar entrada \(option.name): \(error.localizedDescription)")
             }
+            // AUTOMÁTICO: si el usuario eligió un intercom/audífono Bluetooth,
+            // activar modo llamada y abrir el micrófono solo (a la gente le cuesta
+            // entender que hay que encenderlos a mano para que el intercom funcione).
+            let isBluetoothMic = port.portType == .bluetoothHFP || port.portType == .bluetoothA2DP
+                || port.portType == .bluetoothLE
+            if isBluetoothMic {
+                self.autoEnableForHeadset()
+            }
             // Pequeña espera y refrescar la UI con la ruta ya aplicada.
             self.audioQueue.asyncAfter(deadline: .now() + 0.2) {
                 self.refreshInputs()
+            }
+        }
+    }
+
+    /// Al elegir un intercom/audífono Bluetooth: activa el modo llamada (para que
+    /// se habilite el micrófono HFP de intercoms como el FreedConn) y abre el
+    /// micrófono automáticamente. Así el rider no tiene que configurarlo a mano.
+    private func autoEnableForHeadset() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            // Modo llamada ON (si no estaba) para activar el micrófono del intercom.
+            if !self.useCallKit {
+                self.useCallKit = true
+                self.log.info(.bridge, "Auto: modo llamada activado al elegir audífono/intercom")
+            }
+            // Abrir el micrófono si el bridge ya está corriendo.
+            if self.isRunning {
+                self.setTransmitting(true)
+                self.log.info(.bridge, "Auto: micrófono abierto al elegir audífono/intercom")
             }
         }
     }
