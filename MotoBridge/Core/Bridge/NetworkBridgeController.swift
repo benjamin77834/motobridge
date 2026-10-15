@@ -295,6 +295,11 @@ final class NetworkBridgeController: ObservableObject {
     /// Para subir la ganancia una sola vez al detectarlas (no pisar ajustes del usuario después).
     private var rayBanAutoBoosted = false
 
+    /// Abrir el micrófono en cuanto el audio arranque. Se usa cuando elegir un
+    /// audífono reinicia el bridge (al activar modo llamada): el mic debe quedar
+    /// abierto DESPUÉS del reinicio, no antes (si no, se pierde).
+    private var pendingMicOpen = false
+
     /// Entradas de audio disponibles (AirPods, casco, mic del teléfono…).
     @Published private(set) var availableInputs: [AudioInputOption] = []
 
@@ -355,6 +360,12 @@ final class NetworkBridgeController: ObservableObject {
                 try? self.audioIO.start()
                 self.refreshInputs()
                 self.log.info(.audioSession, "Audio arrancado por CallKit")
+                // Si quedó pendiente abrir el mic (p. ej. tras elegir audífono),
+                // abrirlo ahora que el audio ya está listo.
+                if self.pendingMicOpen {
+                    self.pendingMicOpen = false
+                    DispatchQueue.main.async { self.setTransmitting(true) }
+                }
             }
         }
         CallKitManager.shared.onDeactivateAudio = { [weak self] in
@@ -889,6 +900,10 @@ final class NetworkBridgeController: ObservableObject {
                 try self.audioIO.start()
                 self.log.info(.audioSession, "AudioIO iniciado")
                 self.refreshInputs()
+                if self.pendingMicOpen {
+                    self.pendingMicOpen = false
+                    DispatchQueue.main.async { self.setTransmitting(true) }
+                }
             } catch {
                 self.log.error(.audioSession, "No se pudo iniciar AudioIO: \(error.localizedDescription)")
             }
@@ -988,15 +1003,23 @@ final class NetworkBridgeController: ObservableObject {
     private func autoEnableForHeadset() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
+            let wasCallKitOff = !self.useCallKit
             // Modo llamada ON (si no estaba) para activar el micrófono del intercom.
-            if !self.useCallKit {
+            if wasCallKitOff {
                 self.useCallKit = true
                 self.log.info(.bridge, "Auto: modo llamada activado al elegir audífono/intercom")
             }
-            // Abrir el micrófono si el bridge ya está corriendo.
             if self.isRunning {
-                self.setTransmitting(true)
-                self.log.info(.bridge, "Auto: micrófono abierto al elegir audífono/intercom")
+                if wasCallKitOff {
+                    // Activar CallKit reinicia el bridge (didSet). El mic debe
+                    // abrirse DESPUÉS del reinicio → lo dejamos pendiente.
+                    self.pendingMicOpen = true
+                    self.log.info(.bridge, "Auto: mic quedará abierto tras reiniciar por modo llamada")
+                } else {
+                    // CallKit ya estaba activo, no hay reinicio: abrir mic ya.
+                    self.setTransmitting(true)
+                    self.log.info(.bridge, "Auto: micrófono abierto al elegir audífono/intercom")
+                }
             }
         }
     }
