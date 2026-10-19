@@ -1103,10 +1103,14 @@ final class NetworkBridgeController: ObservableObject {
                 self.log.info(.audioSession, "Arranque en BOCINAS (A2DP, sin mic)")
                 return
             }
-            self.configureAudioSession()
+            // Si la entrada activa son AirPods/Beats, usar el modo .videoChat
+            // (menor latencia) desde el arranque, no el .voiceChat de intercom.
+            let activeNames = (self.audioSession.availableInputs ?? []).map { $0.portName.lowercased() }
+            let airPodsActive = activeNames.contains { $0.contains("airpod") || $0.contains("beats") }
+            self.configureAudioSession(forAirPods: airPodsActive)
             do {
                 try self.audioIO.start()
-                self.log.info(.audioSession, "AudioIO iniciado")
+                self.log.info(.audioSession, "AudioIO iniciado\(airPodsActive ? " (AirPods, baja latencia)" : "")")
                 self.refreshInputs()
                 if self.pendingMicOpen {
                     self.pendingMicOpen = false
@@ -1192,12 +1196,22 @@ final class NetworkBridgeController: ObservableObject {
             } catch {
                 self.log.error(.audioRoute, "No se pudo fijar entrada \(option.name): \(error.localizedDescription)")
             }
-            // AUTOMÁTICO: si el usuario eligió un intercom/audífono Bluetooth,
-            // activar modo llamada y abrir el micrófono solo (a la gente le cuesta
-            // entender que hay que encenderlos a mano para que el intercom funcione).
+            // Distinguir AirPods/audífonos buenos de intercoms de moto baratos:
+            //  - AirPods/Beats: exponen su micrófono SIN truco de "modo llamada".
+            //    Forzar CallKit/HFP los mete en modo teléfono (16 kHz, con mucho
+            //    retardo = "lento") y provoca un rebote de ruta que a veces deja
+            //    el mic cerrado. Por eso NO activamos CallKit: abrimos el mic
+            //    directo y dejamos que iOS use su modo de voz nativo (baja
+            //    latencia y micrófono activo).
+            //  - Intercom HFP (FreedConn/Hysnox): sí necesita el modo llamada
+            //    para habilitar su micrófono.
+            let name = port.portName.lowercased()
+            let isAirPodsLike = name.contains("airpod") || name.contains("beats")
             let isBluetoothMic = port.portType == .bluetoothHFP || port.portType == .bluetoothA2DP
                 || port.portType == .bluetoothLE
-            if isBluetoothMic {
+            if isAirPodsLike {
+                self.enableForAirPods()
+            } else if isBluetoothMic {
                 self.autoEnableForHeadset()
             }
             // Refrescar la UI con la ruta aplicada y quitar el aviso de preparando.
@@ -1230,6 +1244,30 @@ final class NetworkBridgeController: ObservableObject {
                     // CallKit ya estaba activo, no hay reinicio: abrir mic ya.
                     self.setTransmitting(true)
                     self.log.info(.bridge, "Auto: micrófono abierto al elegir audífono/intercom")
+                }
+            }
+        }
+    }
+
+    /// Al elegir AirPods/Beats: NO forzamos CallKit/HFP (eso los vuelve lentos y
+    /// rompe la ruta). Configuramos la sesión de voz, aseguramos que la salida
+    /// vaya a los AirPods y abrimos el micrófono para poder hablar y oír por
+    /// ellos de inmediato, con baja latencia.
+    private func enableForAirPods() {
+        audioQueue.async { [weak self] in
+            guard let self else { return }
+            // Sesión de voz optimizada para AirPods (.videoChat, menor latencia),
+            // sin modo llamada. Reinicia el motor para captar su formato.
+            self.configureAudioSession(forAirPods: true)
+            // Salida al dispositivo Bluetooth (no al altavoz): .none deja que iOS
+            // enrute a los AirPods, que son la ruta preferida conectada.
+            try? self.audioSession.overrideOutputAudioPort(.none)
+            try? self.audioIO.restart()
+            self.refreshInputs()
+            if self.isRunning {
+                DispatchQueue.main.async {
+                    self.setTransmitting(true)
+                    self.log.info(.audioRoute, "AirPods: micrófono abierto, sin modo llamada (baja latencia)")
                 }
             }
         }
@@ -1470,7 +1508,11 @@ final class NetworkBridgeController: ObservableObject {
 
     // MARK: - Audio session
 
-    private func configureAudioSession() {
+    /// forAirPods: cuando el audífono activo son AirPods/Beats, usamos el modo
+    /// .videoChat, que en iOS da a los AirPods un canal de voz de menor latencia
+    /// y mejor códec que el .voiceChat clásico. Para intercoms de moto baratos
+    /// mantenemos .voiceChat (más compatible con su HFP).
+    private func configureAudioSession(forAirPods: Bool = false) {
         do {
             let bluetoothOption: AVAudioSession.CategoryOptions
             if #available(iOS 18.0, *) {
@@ -1492,13 +1534,13 @@ final class NetworkBridgeController: ObservableObject {
 
             try audioSession.setCategory(
                 .playAndRecord,
-                mode: .voiceChat,
+                mode: forAirPods ? .videoChat : .voiceChat,
                 options: options
             )
             // Buffer IO corto para menos latencia (captura + reproducción).
             try? audioSession.setPreferredIOBufferDuration(0.01) // ~10 ms
             try audioSession.setActive(true, options: [])
-            log.info(.audioSession, "AudioSession lista (coexistir=\(coexistWithOtherAudio), IOBuf=\(String(format: "%.1fms", audioSession.ioBufferDuration*1000)))")
+            log.info(.audioSession, "AudioSession lista (modo=\(forAirPods ? "videoChat" : "voiceChat"), coexistir=\(coexistWithOtherAudio), IOBuf=\(String(format: "%.1fms", audioSession.ioBufferDuration*1000)))")
         } catch {
             log.error(.audioSession, "Error configurando AudioSession: \(error.localizedDescription)")
         }
