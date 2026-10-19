@@ -95,7 +95,7 @@ final class NetworkBridgeController: ObservableObject {
             let wasRunning = isRunning
             stop()
             if wasRunning {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
                     self?.start()
                 }
             }
@@ -299,6 +299,10 @@ final class NetworkBridgeController: ObservableObject {
     /// audífono reinicia el bridge (al activar modo llamada): el mic debe quedar
     /// abierto DESPUÉS del reinicio, no antes (si no, se pierde).
     private var pendingMicOpen = false
+
+    /// Mensaje visible mientras se prepara el audífono/intercom (feedback para
+    /// que el usuario no sienta que "no pasó nada" durante la negociación BT).
+    @Published private(set) var headsetPreparing: String = ""
 
     /// Entradas de audio disponibles (AirPods, casco, mic del teléfono…).
     @Published private(set) var availableInputs: [AudioInputOption] = []
@@ -1009,11 +1013,13 @@ final class NetworkBridgeController: ObservableObject {
     /// conexión); iOS aplica el cambio de entrada en caliente. El engine capta
     /// el nuevo formato en el siguiente route-change automáticamente.
     func selectInput(_ option: AudioInputOption) {
+        // Feedback inmediato: el usuario ve que se está preparando el audífono.
+        DispatchQueue.main.async { self.headsetPreparing = "Preparando \(option.name)…" }
         audioQueue.async { [weak self] in
             guard let self else { return }
             guard let port = (self.audioSession.availableInputs ?? []).first(where: { $0.uid == option.id }) else {
                 self.log.warning(.audioRoute, "Entrada no encontrada: \(option.name)")
-                DispatchQueue.main.async { self.refreshInputs() }
+                DispatchQueue.main.async { self.headsetPreparing = ""; self.refreshInputs() }
                 return
             }
             do {
@@ -1030,9 +1036,10 @@ final class NetworkBridgeController: ObservableObject {
             if isBluetoothMic {
                 self.autoEnableForHeadset()
             }
-            // Pequeña espera y refrescar la UI con la ruta ya aplicada.
+            // Refrescar la UI con la ruta aplicada y quitar el aviso de preparando.
             self.audioQueue.asyncAfter(deadline: .now() + 0.2) {
                 self.refreshInputs()
+                DispatchQueue.main.async { self.headsetPreparing = "" }
             }
         }
     }
