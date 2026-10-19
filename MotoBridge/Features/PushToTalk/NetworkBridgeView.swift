@@ -28,6 +28,11 @@ struct NetworkBridgeView: View {
             .padding()
         }
         .navigationTitle("Mono Bridge")
+        .onAppear {
+            // Detectar audífonos al abrir, para que AirPods/Beats aparezcan solos
+            // y el botón rápido esté listo sin pulsar nada.
+            if !controller.isRunning { controller.prepareAudioRoutes() }
+        }
         .sheet(isPresented: $showSettings) {
             NavigationStack {
                 ScrollView {
@@ -395,6 +400,21 @@ struct NetworkBridgeView: View {
     private var outputCard: some View {
         VStack(spacing: 8) {
             Text("SALIDA DE AUDIO").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+
+            // Acceso rápido: si hay AirPods/Beats conectados, un toque los deja
+            // como entrada+salida optimizada (sin entrar a Configuración).
+            if !controller.premiumHeadsetName.isEmpty {
+                Button {
+                    controller.selectPremiumHeadset()
+                } label: {
+                    Label("Usar \(controller.premiumHeadsetName)", systemImage: "airpods")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+            }
+
             HStack(spacing: 10) {
                 Button {
                     controller.setOutput(.headset)

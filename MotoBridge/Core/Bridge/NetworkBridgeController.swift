@@ -484,6 +484,45 @@ final class NetworkBridgeController: ObservableObject {
         if !skipPrompts {
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         }
+
+        // Reaccionar al conectar/desconectar audífonos (AirPods, intercom): iOS
+        // avisa con routeChange. Así la lista de entradas se refresca SOLA y, si
+        // son AirPods/Beats, se asume su configuración sin que el usuario pulse
+        // "Detectar" ni espere.
+        NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] note in
+            self?.handleRouteChange(note)
+        }
+    }
+
+    /// Maneja un cambio de ruta de audio del sistema (p. ej. conectar AirPods).
+    private func handleRouteChange(_ note: Notification) {
+        let reasonRaw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
+        let reason = reasonRaw.flatMap { AVAudioSession.RouteChangeReason(rawValue: $0) }
+        log.info(.audioRoute, "Cambio de ruta: \(reason.map { "\($0.rawValue)" } ?? "?")")
+        audioQueue.async { [weak self] in
+            guard let self else { return }
+            // Activar brevemente la sesión asegura que iOS exponga los nuevos
+            // dispositivos Bluetooth en availableInputs.
+            if !self.isRunning {
+                let opt: AVAudioSession.CategoryOptions
+                if #available(iOS 18.0, *) { opt = .allowBluetoothHFP } else { opt = AVAudioSession.CategoryOptions(rawValue: 0x4) }
+                try? self.audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [opt])
+                try? self.audioSession.setActive(true)
+            }
+            self.refreshInputs()
+
+            // Si acaban de conectarse AirPods/Beats, seleccionarlos y asumir su
+            // configuración automáticamente (nueva ruta disponible).
+            if reason == .newDeviceAvailable,
+               let premium = (self.audioSession.availableInputs ?? [])
+                   .first(where: { Self.isPremiumAppleHeadset($0.portName) }) {
+                let option = AudioInputOption(id: premium.uid, name: premium.portName, type: premium.portType.rawValue)
+                DispatchQueue.main.async { self.selectInput(option) }
+            }
+        }
     }
 
     /// Lee los botones del intercom (Hysnox) vía control remoto multimedia.
@@ -1287,6 +1326,17 @@ final class NetworkBridgeController: ObservableObject {
                 }
             }
         }
+    }
+
+    /// Selecciona de un toque los AirPods/Beats detectados como entrada+salida.
+    /// Para el botón rápido de la pantalla principal (sin entrar a Configuración).
+    func selectPremiumHeadset() {
+        guard let premium = (audioSession.availableInputs ?? [])
+            .first(where: { Self.isPremiumAppleHeadset($0.portName) }) else {
+            log.warning(.audioRoute, "No hay AirPods/Beats disponibles para seleccionar")
+            return
+        }
+        selectInput(AudioInputOption(id: premium.uid, name: premium.portName, type: premium.portType.rawValue))
     }
 
     /// Selecciona la SALIDA de audio (dónde escuchas): altavoz, o el dispositivo
