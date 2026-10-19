@@ -85,14 +85,15 @@ struct RescueCard: View {
                     .foregroundStyle(signalColor(sig.level))
             }
             HStack(spacing: 14) {
-                // Diferencia de pisos (altímetro).
-                if let floors = controller.floorsTo(sig) {
-                    Label(floorText(floors), systemImage: floors == 0 ? "equal.circle" :
-                            (floors > 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill"))
+                // Diferencia de altura: metros + pisos (altímetro).
+                if let meters = controller.metersTo(sig) {
+                    let floors = controller.floorsTo(sig) ?? 0
+                    Label(altitudeText(meters: meters, floors: floors),
+                          systemImage: directionIcon(meters))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(floors == 0 ? .green : .orange)
+                        .foregroundStyle(abs(meters) < 1 ? .green : .orange)
                 } else {
-                    Label("Piso: sin dato", systemImage: "questionmark.circle")
+                    Label("Altura: sin dato", systemImage: "questionmark.circle")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 // Batería del otro teléfono.
@@ -108,11 +109,25 @@ struct RescueCard: View {
 
     // MARK: - Helpers de presentación
 
-    private func floorText(_ floors: Int) -> String {
-        if floors == 0 { return "Mismo nivel que tú" }
+    /// Texto de altura: metros exactos + estimación de pisos y dirección vertical.
+    /// Ej.: "≈ 6 m ABAJO (2 pisos)". Si están casi al mismo nivel, lo indica.
+    private func altitudeText(meters: Double, floors: Int) -> String {
+        let m = abs(meters)
+        if m < 1 { return "Mismo nivel que tú (±1 m)" }
+        let dir = meters > 0 ? "ARRIBA" : "ABAJO"
+        let mText = String(format: "%.0f m", m)
+        if floors == 0 {
+            return "≈ \(mText) \(dir)"
+        }
         let n = abs(floors)
         let piso = n == 1 ? "piso" : "pisos"
-        return floors > 0 ? "≈ \(n) \(piso) ARRIBA" : "≈ \(n) \(piso) ABAJO"
+        return "≈ \(mText) \(dir) (\(n) \(piso))"
+    }
+
+    /// Flecha según la dirección vertical (arriba / abajo / mismo nivel).
+    private func directionIcon(_ meters: Double) -> String {
+        if abs(meters) < 1 { return "equal.circle" }
+        return meters > 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill"
     }
 
     private func signalColor(_ level: NetworkBridgeController.RiderSignal.Level) -> Color {

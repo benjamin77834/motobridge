@@ -602,9 +602,16 @@ final class NetworkBridgeController: ObservableObject {
     /// Diferencia de pisos entre OTRA persona y yo, con signo.
     /// Positivo = la otra persona está ARRIBA; negativo = ABAJO. nil si falta dato.
     func floorsTo(_ sig: RiderSignal) -> Int? {
+        guard let m = metersTo(sig) else { return nil }
+        return RescueSensors.floorsFrom(metersDelta: m)
+    }
+
+    /// Diferencia de ALTURA en metros entre OTRA persona y yo, con signo.
+    /// Positivo = la otra persona está ARRIBA; negativo = ABAJO. nil si falta dato.
+    func metersTo(_ sig: RiderSignal) -> Double? {
         guard let theirAlt = sig.altitudeMeters,
               let myAlt = rescueSensors.relativeAltitudeMeters else { return nil }
-        return RescueSensors.floorsFrom(metersDelta: theirAlt - myAlt)
+        return theirAlt - myAlt
     }
 
     /// Registra que se oyó a un rider (por latido o voz) y actualiza su LED.
