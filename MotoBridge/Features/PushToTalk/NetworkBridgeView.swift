@@ -237,6 +237,14 @@ struct NetworkBridgeView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            // Audífono premium detectado: la app ya asumió la mejor config.
+            if !controller.premiumHeadsetName.isEmpty {
+                Label("\(controller.premiumHeadsetName): optimizado para hablar y oír por ellos (baja latencia).",
+                      systemImage: "airpods")
+                    .font(.caption).foregroundStyle(.green)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             Button {
                 if controller.isRunning { controller.stop() } else { controller.start() }
             } label: {

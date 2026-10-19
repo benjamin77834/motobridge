@@ -343,6 +343,20 @@ final class NetworkBridgeController: ObservableObject {
     enum AudioQuality: String { case high = "Alta (AirPods/Beats)", standard = "Estándar", low = "Voz (intercom HFP)" }
     @Published private(set) var detectedQuality: AudioQuality = .standard
 
+    /// Nombre del audífono premium detectado (AirPods/Beats), para mostrarlo en
+    /// la UI. "" si no hay ninguno. La app asume la mejor configuración para él.
+    @Published private(set) var premiumHeadsetName: String = ""
+
+    /// ¿Es un audífono premium de Apple (AirPods / Beats) por el nombre del
+    /// puerto? Estos exponen su micrófono SIN truco de "modo llamada" y, en los
+    /// modelos nuevos (AirPods 4, Pro 2+), usan LE Audio (LC3): mejor micrófono
+    /// y menos latencia. Para ellos NO forzamos HFP.
+    static func isPremiumAppleHeadset(_ portName: String) -> Bool {
+        let n = portName.lowercased()
+        return n.contains("airpod") || n.contains("beats")
+            || n.contains("powerbeats") || n.contains("beatspill") || n.contains("beats pill")
+    }
+
     /// ¿Se detectaron unas Ray-Ban Meta como salida? (volumen bajo → sube ganancia).
     @Published private(set) var rayBanDetected = false
     /// Para subir la ganancia una sola vez al detectarlas (no pisar ajustes del usuario después).
@@ -1105,8 +1119,8 @@ final class NetworkBridgeController: ObservableObject {
             }
             // Si la entrada activa son AirPods/Beats, usar el modo .videoChat
             // (menor latencia) desde el arranque, no el .voiceChat de intercom.
-            let activeNames = (self.audioSession.availableInputs ?? []).map { $0.portName.lowercased() }
-            let airPodsActive = activeNames.contains { $0.contains("airpod") || $0.contains("beats") }
+            let airPodsActive = (self.audioSession.availableInputs ?? [])
+                .contains { Self.isPremiumAppleHeadset($0.portName) }
             self.configureAudioSession(forAirPods: airPodsActive)
             do {
                 try self.audioIO.start()
@@ -1133,10 +1147,13 @@ final class NetworkBridgeController: ObservableObject {
         let ins = route.inputs.map { "\($0.portName) (\($0.portType.rawValue))" }.joined(separator: ", ")
 
         // Detectar calidad según el dispositivo (por nombre y perfil).
-        let allNames = (route.inputs + route.outputs).map { $0.portName.lowercased() }
-        let isHighEnd = allNames.contains { $0.contains("airpod") || $0.contains("beats") }
+        let allPortNames = (route.inputs + route.outputs).map { $0.portName }
+        let allNames = allPortNames.map { $0.lowercased() }
+        let premiumName = allPortNames.first { Self.isPremiumAppleHeadset($0) }
+        let isHighEnd = premiumName != nil
         let isA2DP = route.outputs.contains { $0.portType == .bluetoothA2DP }
         let quality: AudioQuality = (isHighEnd || isA2DP) ? .high : (route.inputs.contains { $0.portType == .bluetoothHFP } ? .low : .standard)
+        DispatchQueue.main.async { self.premiumHeadsetName = premiumName ?? "" }
 
         // Ray-Ban Meta: se conectan como audífono normal pero su volumen de
         // salida es bajo. Al detectarlas, subir la ganancia de escucha una vez.
@@ -1205,8 +1222,7 @@ final class NetworkBridgeController: ObservableObject {
             //    latencia y micrófono activo).
             //  - Intercom HFP (FreedConn/Hysnox): sí necesita el modo llamada
             //    para habilitar su micrófono.
-            let name = port.portName.lowercased()
-            let isAirPodsLike = name.contains("airpod") || name.contains("beats")
+            let isAirPodsLike = Self.isPremiumAppleHeadset(port.portName)
             let isBluetoothMic = port.portType == .bluetoothHFP || port.portType == .bluetoothA2DP
                 || port.portType == .bluetoothLE
             if isAirPodsLike {
@@ -1539,8 +1555,14 @@ final class NetworkBridgeController: ObservableObject {
             )
             // Buffer IO corto para menos latencia (captura + reproducción).
             try? audioSession.setPreferredIOBufferDuration(0.01) // ~10 ms
+            if forAirPods {
+                // AirPods 4 / Pro 2+ usan LE Audio (LC3): pedir una frecuencia de
+                // muestreo alta evita que iOS caiga al HFP mono de 8/16 kHz y deja
+                // el micrófono en banda ancha (voz más clara y con menos retardo).
+                try? audioSession.setPreferredSampleRate(24000)
+            }
             try audioSession.setActive(true, options: [])
-            log.info(.audioSession, "AudioSession lista (modo=\(forAirPods ? "videoChat" : "voiceChat"), coexistir=\(coexistWithOtherAudio), IOBuf=\(String(format: "%.1fms", audioSession.ioBufferDuration*1000)))")
+            log.info(.audioSession, "AudioSession lista (modo=\(forAirPods ? "videoChat" : "voiceChat"), SR=\(Int(audioSession.sampleRate)), coexistir=\(coexistWithOtherAudio), IOBuf=\(String(format: "%.1fms", audioSession.ioBufferDuration*1000)))")
         } catch {
             log.error(.audioSession, "Error configurando AudioSession: \(error.localizedDescription)")
         }
