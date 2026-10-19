@@ -34,6 +34,14 @@ class BridgeController(context: Context) {
     var inputLevel by mutableStateOf(0f); private set
     var events by mutableStateOf(listOf<String>()); private set
 
+    /** Consejo de conexión cuando el bridge corre pero no hay riders conectados. */
+    val connectionHint: String
+        get() {
+            val peers = peerName?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+            if (!isRunning || peers.isNotEmpty()) return ""
+            return "Buscando riders… Todos deben estar en la MISMA red WiFi (o el mismo hotspot) con el bridge iniciado. Para incluir iPhones, uno debe activar el modo Puente."
+        }
+
     // Estado observable para los sliders de Compose.
     var micGain by mutableStateOf(1.5f)   // baja por defecto: evita saturar y meter gis
         private set

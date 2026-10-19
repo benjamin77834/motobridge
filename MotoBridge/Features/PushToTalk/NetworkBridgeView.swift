@@ -213,6 +213,29 @@ struct NetworkBridgeView: View {
             .background(statusColor.opacity(0.18))
             .clipShape(RoundedRectangle(cornerRadius: 16))
 
+            // Consejo de conexión cuando el bridge corre pero nadie se ha unido.
+            if !controller.connectionHint.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "info.circle.fill").foregroundColor(.blue)
+                    Text(controller.connectionHint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .background(Color.blue.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            // Aviso del audífono preparándose.
+            if !controller.headsetPreparing.isEmpty {
+                HStack(spacing: 8) {
+                    ProgressView().scaleEffect(0.8)
+                    Text(controller.headsetPreparing).font(.caption).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             Button {
                 if controller.isRunning { controller.stop() } else { controller.start() }
             } label: {

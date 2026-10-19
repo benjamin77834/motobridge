@@ -304,6 +304,20 @@ final class NetworkBridgeController: ObservableObject {
     /// que el usuario no sienta que "no pasó nada" durante la negociación BT).
     @Published private(set) var headsetPreparing: String = ""
 
+    /// Consejo de conexión cuando el bridge corre pero no hay riders conectados.
+    /// Ayuda a diagnosticar por qué no conectan (modo, red, cercanía).
+    var connectionHint: String {
+        guard isRunning, connectedPeers.isEmpty else { return "" }
+        switch mode {
+        case .apple:
+            return "Buscando riders… Entre iPhones se conectan solos: acérquense y asegúrense de que todos estén en modo Apple con el bridge iniciado. No hace falta WiFi."
+        case .universal:
+            return "Buscando riders… Todos deben estar en la MISMA red WiFi (o el mismo hotspot) y en modo Android, con el bridge iniciado."
+        case .gateway:
+            return "Modo Puente activo. El Android debe estar en tu misma WiFi/hotspot; los demás iPhones en modo Apple. Todos con el bridge iniciado."
+        }
+    }
+
     /// Entradas de audio disponibles (AirPods, casco, mic del teléfono…).
     @Published private(set) var availableInputs: [AudioInputOption] = []
 

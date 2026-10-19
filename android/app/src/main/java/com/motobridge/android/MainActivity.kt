@@ -165,6 +165,9 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
             ) {
                 Text(if (controller.isRunning) "DETENER" else "INICIAR BRIDGE", fontWeight = FontWeight.Bold)
             }
+            if (controller.connectionHint.isNotEmpty()) {
+                Text("ℹ️ ${controller.connectionHint}", fontSize = 12.sp, color = Color(0xFF8AB4F8))
+            }
         }
     }
 
