@@ -3,6 +3,7 @@ import AVFoundation
 import Combine
 import MediaPlayer
 import MultipeerConnectivity
+import UIKit
 import UserNotifications
 
 /// Une la captura/reproducción de audio (AudioIO) con el transporte de red
@@ -502,6 +503,11 @@ final class NetworkBridgeController: ObservableObject {
         let name: String
         var hops: Int          // saltos (0 = directo/cerca)
         var lastSeen: Date     // último latido/voz recibido
+        /// Altura relativa en metros reportada por el otro teléfono (altímetro
+        /// barométrico). nil si el otro no envía datos de rescate.
+        var altitudeMeters: Double? = nil
+        /// Batería del otro teléfono en % (para priorizar el rescate). nil = n/d.
+        var batteryPercent: Int? = nil
         /// Color del LED: verde (cerca), amarillo (lejos), rojo (perdido).
         enum Level { case near, far, lost }
         var level: Level {
@@ -513,23 +519,95 @@ final class NetworkBridgeController: ObservableObject {
     @Published private(set) var riderSignals: [RiderSignal] = []
     private var presenceTimer: Timer?
 
+    // MARK: - Modo Rescate (localizar persona atrapada sin GPS)
+
+    /// Sensores del teléfono: altímetro barométrico + brújula.
+    let rescueSensors = RescueSensors()
+
+    /// ¿Está activo el Modo Rescate? Al activarse, el latido de presencia incluye
+    /// la altura barométrica y la batería, y se arrancan los sensores. Pensado
+    /// para terremoto/derrumbe: víctima y rescatista con la app comparan altura
+    /// (pisos) y la señal para orientar el rescate.
+    @Published private(set) var rescueMode: Bool = UserDefaults.standard.bool(forKey: "rescueMode")
+
+    func updateRescueMode(_ on: Bool) {
+        guard rescueMode != on else { return }
+        rescueMode = on
+        UserDefaults.standard.set(on, forKey: "rescueMode")
+        if on { rescueSensors.start() } else { rescueSensors.stop() }
+        log.info(.bridge, "Modo rescate: \(on ? "ON" : "OFF")")
+    }
+
+    /// Lee el nivel de batería del propio teléfono (0–100), o nil si no se sabe.
+    private func currentBatteryPercent() -> Int? {
+        UIDevice.current.isBatteryMonitoringEnabled = true
+        let lvl = UIDevice.current.batteryLevel   // -1 si desconocido
+        guard lvl >= 0 else { return nil }
+        return Int((lvl * 100).rounded())
+    }
+
+    /// Diferencia de pisos entre OTRA persona y yo, con signo.
+    /// Positivo = la otra persona está ARRIBA; negativo = ABAJO. nil si falta dato.
+    func floorsTo(_ sig: RiderSignal) -> Int? {
+        guard let theirAlt = sig.altitudeMeters,
+              let myAlt = rescueSensors.relativeAltitudeMeters else { return nil }
+        return RescueSensors.floorsFrom(metersDelta: theirAlt - myAlt)
+    }
+
     /// Registra que se oyó a un rider (por latido o voz) y actualiza su LED.
-    private func noteRiderSeen(_ name: String, hops: Int) {
+    /// altitudeMeters/batteryPercent llegan solo en latidos de Modo Rescate.
+    private func noteRiderSeen(_ name: String, hops: Int,
+                               altitudeMeters: Double? = nil, batteryPercent: Int? = nil) {
         log.info(.bridge, "RADAR: latido de \"\(name)\" (yo soy \"\(localName)\"), hops=\(hops)")
         guard name != localName else { return }  // no me cuento a mí
         DispatchQueue.main.async {
             if let idx = self.riderSignals.firstIndex(where: { $0.name == name }) {
                 self.riderSignals[idx].hops = hops
                 self.riderSignals[idx].lastSeen = Date()
+                if let a = altitudeMeters { self.riderSignals[idx].altitudeMeters = a }
+                if let b = batteryPercent { self.riderSignals[idx].batteryPercent = b }
             } else {
-                self.riderSignals.append(RiderSignal(name: name, hops: hops, lastSeen: Date()))
+                self.riderSignals.append(RiderSignal(name: name, hops: hops, lastSeen: Date(),
+                                                     altitudeMeters: altitudeMeters,
+                                                     batteryPercent: batteryPercent))
             }
         }
     }
 
-    /// Emite un latido de presencia (nombre) para que el radar de los demás nos vea.
+    /// Parsea el payload de presencia: primera línea = nombre; líneas ALT=/BAT=
+    /// (opcionales) = datos de Modo Rescate.
+    private func parsePresence(_ payload: Data) -> (name: String, alt: Double?, bat: Int?)? {
+        guard let text = String(data: payload, encoding: .utf8) else { return nil }
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+        guard let first = lines.first else { return nil }
+        let name = String(first)
+        guard !name.isEmpty else { return nil }
+        var alt: Double? = nil
+        var bat: Int? = nil
+        for line in lines.dropFirst() {
+            if line.hasPrefix("ALT=") { alt = Double(line.dropFirst(4)) }
+            else if line.hasPrefix("BAT=") { bat = Int(line.dropFirst(4)) }
+        }
+        return (name, alt, bat)
+    }
+
+    /// Emite un latido de presencia para que el radar de los demás nos vea.
+    /// Payload normal: solo el nombre (compatible con versiones viejas y Android).
+    /// En Modo Rescate se añaden líneas extra con altura barométrica y batería:
+    ///   "<nombre>\nALT=<metros>\nBAT=<porcentaje>"
+    /// La primera línea sigue siendo el nombre, así los lectores viejos no se rompen.
     private func sendPresence() {
-        guard isRunning, !localName.isEmpty, let payload = localName.data(using: .utf8) else { return }
+        guard isRunning, !localName.isEmpty else { return }
+        var text = localName
+        if rescueMode {
+            if let alt = rescueSensors.relativeAltitudeMeters {
+                text += "\nALT=\(String(format: "%.2f", alt))"
+            }
+            if let bat = currentBatteryPercent() {
+                text += "\nBAT=\(bat)"
+            }
+        }
+        guard let payload = text.data(using: .utf8) else { return }
         let channeled = VoiceChannel.wrap(payload, type: .presence, targetId: 0)
         let toSend = meshEnabled ? mesh.wrapOutgoing(channeled) : channeled
         transport.sendAudio(toSend)
@@ -866,9 +944,11 @@ final class NetworkBridgeController: ObservableObject {
         }
         switch msg.type {
         case .presence:
-            // Latido de otro rider para el radar. El payload es su nombre.
-            if let name = String(data: msg.audio, encoding: .utf8), !name.isEmpty {
-                noteRiderSeen(name, hops: hops)
+            // Latido de otro rider para el radar. Primera línea = nombre; en
+            // Modo Rescate trae también altura barométrica y batería.
+            if let info = parsePresence(msg.audio) {
+                noteRiderSeen(info.name, hops: hops,
+                              altitudeMeters: info.alt, batteryPercent: info.bat)
             }
             return
         case .group:
@@ -971,6 +1051,7 @@ final class NetworkBridgeController: ObservableObject {
         gatewayTransport?.start()   // modo puente: también el lado Android/WiFi
         remoteControl.start()   // escuchar botones del intercom (Hysnox)
         startPresenceTimer()    // radar: latido de presencia
+        if rescueMode { rescueSensors.start() }  // altímetro + brújula para rescate
         log.info(.bridge, "NetworkBridge iniciado (\(mode.rawValue))")
 
         // Modo Walkie-Talkie: altavoz + micrófono del teléfono, manos libres.
@@ -1175,6 +1256,7 @@ final class NetworkBridgeController: ObservableObject {
         isRunning = false
         remoteControl.stop()
         stopPresenceTimer()
+        rescueSensors.stop()
         stopFocusTimer()
         audioFocus = .music
         setTransmitting(false)

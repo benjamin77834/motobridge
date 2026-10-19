@@ -8,6 +8,7 @@ struct DashboardView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+                RescueCard()
                 deviceStatusSection
                 bridgeSection
                 micSection

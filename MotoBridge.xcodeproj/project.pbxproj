@@ -16,6 +16,7 @@
 		4139839F9CA39BFF4CE9B3A5 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E0A81559B8E2835AE5F780 /* SettingsView.swift */; };
 		551D13D3C201F1815B6D078F /* LocalNetworkTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F58EC3B8B3DA3607714FBB1 /* LocalNetworkTransport.swift */; };
 		5B6E1981AF6CDC100004C22B /* PeerBridgeSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 168F2607A0C6C75F9A54514A /* PeerBridgeSession.swift */; };
+		6465A038E45ADED840FB9BB1 /* RescueSensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF9580AA4ADF0354C618C0C /* RescueSensors.swift */; };
 		6EA3F4C9BE04F70D8039C707 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00398E2CF63EB430C40CA29 /* DashboardView.swift */; };
 		72F5D40344BE88A28FBC6356 /* MotoBridgeIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF01898A30F24B8F72F05CF7 /* MotoBridgeIntents.swift */; };
 		7A2337F6902A973C7659606D /* RemoteControlManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59ADA87FF916BF8D514DE639 /* RemoteControlManager.swift */; };
@@ -31,6 +32,7 @@
 		D03330360E1BB3E99C824D32 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 288B6115B720CFEF4733A7CD /* Logger.swift */; };
 		D7369E4CA10188A5A12EE763 /* Opus in Frameworks */ = {isa = PBXBuildFile; productRef = 8DB3C465C966D433BD6CE562 /* Opus */; };
 		E4D0BF35115C81F2DE626EF8 /* AudioIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C62488C8C39EC93531E9631 /* AudioIO.swift */; };
+		EA51AE31C72DDE13E7EF74B4 /* RescueCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D6A6F20F848359193BA78FC /* RescueCard.swift */; };
 		EB24E461E93390F52E50FBB3 /* NetworkBridgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77EDDAC5C8DBFCF68787123D /* NetworkBridgeView.swift */; };
 		F10C05F658292D4F36E50017 /* MotoBridgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07ECC8C3E436BEB17E9E4788 /* MotoBridgeApp.swift */; };
 		FAD8692B4B16EE3182DA3F2C /* AudioCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2826E967233D3C971337E9F8 /* AudioCodec.swift */; };
@@ -49,10 +51,11 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		04F61816098242C272FE1BA1 /* MotoBridgeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MotoBridgeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		04F61816098242C272FE1BA1 /* MotoBridgeTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MotoBridgeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		06E0A81559B8E2835AE5F780 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		07ECC8C3E436BEB17E9E4788 /* MotoBridgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotoBridgeApp.swift; sourceTree = "<group>"; };
 		0CC83DDBF5548389BC949696 /* VoiceEnhancer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceEnhancer.swift; sourceTree = "<group>"; };
+		0D6A6F20F848359193BA78FC /* RescueCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RescueCard.swift; sourceTree = "<group>"; };
 		106FAF4B343CB07D8D4C874A /* AudioBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBridgeTests.swift; sourceTree = "<group>"; };
 		14569E9F3FF76A9725C03102 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		168F2607A0C6C75F9A54514A /* PeerBridgeSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerBridgeSession.swift; sourceTree = "<group>"; };
@@ -60,7 +63,7 @@
 		236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshRelay.swift; sourceTree = "<group>"; };
 		2826E967233D3C971337E9F8 /* AudioCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCodec.swift; sourceTree = "<group>"; };
 		288B6115B720CFEF4733A7CD /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
-		2ADA7F7E767C932537748638 /* MotoBridge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MotoBridge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2ADA7F7E767C932537748638 /* MotoBridge.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MotoBridge.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3DFB6FCF0D1AE67FB56C4653 /* IntercomDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntercomDevice.swift; sourceTree = "<group>"; };
 		47FAFD435FA35518B85EB99B /* AudioTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTransport.swift; sourceTree = "<group>"; };
 		55BF19FCFE50A747E7C04C5B /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
@@ -76,8 +79,9 @@
 		9C62488C8C39EC93531E9631 /* AudioIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioIO.swift; sourceTree = "<group>"; };
 		9E30CBE0D99AAA8BB74D3E37 /* CallKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallKitManager.swift; sourceTree = "<group>"; };
 		BF01898A30F24B8F72F05CF7 /* MotoBridgeIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotoBridgeIntents.swift; sourceTree = "<group>"; };
+		CBF9580AA4ADF0354C618C0C /* RescueSensors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RescueSensors.swift; sourceTree = "<group>"; };
 		D00398E2CF63EB430C40CA29 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
-		D73608A31D00D54C0275CF7A /* AppIcon.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = AppIcon.svg; sourceTree = "<group>"; };
+		D73608A31D00D54C0275CF7A /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
 		DC21EBD18C639E527A56D797 /* OpusCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCodec.swift; sourceTree = "<group>"; };
 		FFD17445A42748BADDC08595 /* AudioDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDiagnosticsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -106,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				D00398E2CF63EB430C40CA29 /* DashboardView.swift */,
+				0D6A6F20F848359193BA78FC /* RescueCard.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -285,10 +290,19 @@
 				9EE1A17A757AC4E92CBAC7B9 /* Devices */,
 				27DB9EE2F82BC98917BF1EDD /* Diagnostics */,
 				96F8D24B18792EEBB7C46B93 /* Network */,
+				FD98FD706BC6E7F52AE116B8 /* Rescue */,
 				E41CDC67DCA7E3E43434F4CB /* Voice */,
 				E32BB35BFBE756096487C1A1 /* Watch */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		FD98FD706BC6E7F52AE116B8 /* Rescue */ = {
+			isa = PBXGroup;
+			children = (
+				CBF9580AA4ADF0354C618C0C /* RescueSensors.swift */,
+			);
+			path = Rescue;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -339,9 +353,10 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2700;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					52F74A5193C83E08514C4F6B = {
+						DevelopmentTeam = 48V68SFH7Q;
 						ProvisioningStyle = Automatic;
 					};
 					E66864FF295E7A63DDB2C123 = {
@@ -419,6 +434,8 @@
 				2F8AB49CA8FC2F34725AD4B1 /* OpusCodec.swift in Sources */,
 				5B6E1981AF6CDC100004C22B /* PeerBridgeSession.swift in Sources */,
 				7A2337F6902A973C7659606D /* RemoteControlManager.swift in Sources */,
+				EA51AE31C72DDE13E7EF74B4 /* RescueCard.swift in Sources */,
+				6465A038E45ADED840FB9BB1 /* RescueSensors.swift in Sources */,
 				4139839F9CA39BFF4CE9B3A5 /* SettingsView.swift in Sources */,
 				8D22C5026EA644FB635B06B8 /* VoiceChannel.swift in Sources */,
 				A8BF4C9B3F31E1637E9B5FE5 /* VoiceEnhancer.swift in Sources */,
@@ -442,7 +459,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 48V68SFH7Q;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MotoBridge/Resources/Info.plist;
@@ -450,7 +466,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.monkeyfon;
+				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -461,7 +477,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -498,7 +513,6 @@
 				DEVELOPMENT_TEAM = 48V68SFH7Q;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -513,7 +527,6 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -527,7 +540,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 48V68SFH7Q;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MotoBridge/Resources/Info.plist;
@@ -535,7 +547,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.monkeyfon;
+				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -552,7 +564,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.tests.monkeyfon;
+				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.tests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MotoBridge.app/MotoBridge";
@@ -569,7 +581,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.tests.monkeyfon;
+				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.tests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MotoBridge.app/MotoBridge";
@@ -580,7 +592,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -617,7 +628,6 @@
 				DEVELOPMENT_TEAM = 48V68SFH7Q;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -639,7 +649,6 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;

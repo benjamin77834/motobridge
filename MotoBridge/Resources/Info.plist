@@ -35,6 +35,10 @@
 	<string>MotoBridge usa el micrófono para transmitir tu voz al otro dispositivo.</string>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Mono Bridge controla la reproducción de música (play/pausa) para que no tengas que salir de la app mientras conduces.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Mono Bridge usa el altímetro barométrico para estimar la diferencia de pisos entre tú y otra persona en el Modo Rescate, cuando no hay GPS.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Mono Bridge usa la brújula para indicar en qué rumbo aumenta la señal de la persona que buscas en el Modo Rescate.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
