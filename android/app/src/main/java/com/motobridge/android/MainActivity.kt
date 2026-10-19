@@ -363,6 +363,13 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
                     else -> "Se lee por voz en el casco de todos. Para dirigirlo, elige un rider o grupo en Canal."
                  },
                  fontSize = 11.sp, color = Color.Gray)
+            // Estado de entrega del último mensaje (acuse de recibo).
+            if (controller.lastMessageStatus.isNotEmpty()) {
+                val delivered = controller.lastMessageDeliveredTo.isNotEmpty()
+                Text((if (delivered) "✓ " else "⏳ ") + controller.lastMessageStatus,
+                     fontSize = 11.sp,
+                     color = if (delivered) Color(0xFF34C759) else Color.Gray)
+            }
         }
     }
 

@@ -22,6 +22,7 @@ object VoiceChannel {
     const val TEXT: Byte = 3
     const val SUBGROUP: Byte = 4
     const val PRESENCE: Byte = 5
+    const val ACK: Byte = 6   // acuse de recibo (targetId = nameId del receptor)
 
     fun wrap(audio: ByteArray, type: Byte, targetId: Int): ByteArray {
         val out = ByteArray(HEADER + audio.size)

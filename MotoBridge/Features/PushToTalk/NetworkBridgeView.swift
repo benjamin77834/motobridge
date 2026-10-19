@@ -462,6 +462,18 @@ struct NetworkBridgeView: View {
             }())
                 .font(.caption2).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Estado de entrega del último mensaje (acuse de recibo).
+            if !controller.lastMessageStatus.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: controller.lastMessageDeliveredTo.isEmpty ? "clock" : "checkmark.circle.fill")
+                        .foregroundColor(controller.lastMessageDeliveredTo.isEmpty ? .secondary : .green)
+                    Text(controller.lastMessageStatus)
+                        .font(.caption2)
+                        .foregroundColor(controller.lastMessageDeliveredTo.isEmpty ? .secondary : .green)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .cardStyle()
     }

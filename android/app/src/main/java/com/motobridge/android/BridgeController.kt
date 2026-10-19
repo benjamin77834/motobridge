@@ -288,6 +288,7 @@ class BridgeController(context: Context) {
                     val prefix = if (msg.targetId == 0) "Mensaje del grupo. " else "Mensaje privado. "
                     tts?.speak(prefix + text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "txt-rx")
                 }
+                sendAck()   // confirmar al emisor que lo recibí
             }
             com.motobridge.android.net.VoiceChannel.SUBGROUP -> {
                 // Subgrupo: solo si mi nameId está en la lista de destinatarios.
@@ -297,9 +298,14 @@ class BridgeController(context: Context) {
                     if (text.isNotEmpty() && ttsReady) {
                         tts?.speak("Mensaje de grupo privado. $text", android.speech.tts.TextToSpeech.QUEUE_ADD, null, "txt-rx")
                     }
+                    sendAck()   // confirmar recibo del texto de subgrupo
                 } else {
                     noteVoiceActivity(); audio.playFrom(peerId, msg.audio)
                 }
+            }
+            com.motobridge.android.net.VoiceChannel.ACK -> {
+                // Acuse de recibo de un mensaje que YO envié.
+                handleAck(msg.targetId)
             }
             else -> { noteVoiceActivity(); audio.playFrom(peerId, msg.audio) } // grupo: siempre
         }
@@ -568,6 +574,12 @@ class BridgeController(context: Context) {
         activeSubgroupTargets = IntArray(0)
     }
 
+    // Estado de entrega del último mensaje (acuse de recibo).
+    var lastMessageDeliveredTo by mutableStateOf<List<String>>(emptyList())
+        private set
+    var lastMessageStatus by mutableStateOf("")
+        private set
+
     /** Envía un mensaje ESCRITO que el receptor leerá por voz (TTS).
      *  privateTo = nombre del rider (null = a todo el grupo). */
     fun sendTextMessage(text: String, privateTo: String? = null) {
@@ -578,8 +590,30 @@ class BridgeController(context: Context) {
         val channeled = com.motobridge.android.net.VoiceChannel.wrap(payload, com.motobridge.android.net.VoiceChannel.TEXT, target)
         val toSend = if (meshEnabled) mesh.wrapOutgoing(channeled) else channeled
         transport.sendAudio(toSend, toSend.size)
+        lastMessageDeliveredTo = emptyList()
+        lastMessageStatus = "Enviado · esperando confirmación…"
         val who = if (privateTo != null) "a $privateTo" else "al grupo"
         if (ttsReady) tts?.speak("Mensaje enviado $who", android.speech.tts.TextToSpeech.QUEUE_ADD, null, "txt-tx")
+    }
+
+    /** Envía un acuse de recibo al emisor (targetId = mi nameId). */
+    private fun sendAck() {
+        if (!isRunning) return
+        val channeled = com.motobridge.android.net.VoiceChannel.wrap(ByteArray(0), com.motobridge.android.net.VoiceChannel.ACK, myNameId)
+        val toSend = if (meshEnabled) mesh.wrapOutgoing(channeled) else channeled
+        transport.sendAudio(toSend, toSend.size)
+    }
+
+    /** Procesa un acuse de recibo: marca que ese rider recibió el mensaje. */
+    private fun handleAck(id: Int) {
+        val name = nameForId(id)
+        if (name.isBlank()) return
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            if (!lastMessageDeliveredTo.contains(name)) {
+                lastMessageDeliveredTo = lastMessageDeliveredTo + name
+            }
+            lastMessageStatus = "Entregado a " + lastMessageDeliveredTo.joinToString(", ") + " ✓"
+        }
     }
 
     var alarmActive by mutableStateOf(false)

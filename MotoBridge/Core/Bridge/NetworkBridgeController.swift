@@ -627,6 +627,12 @@ final class NetworkBridgeController: ObservableObject {
         let channeled = VoiceChannel.wrap(payload, type: .text, targetId: target)
         let toSend = meshEnabled ? mesh.wrapOutgoing(channeled) : channeled
         transport.sendAudio(toSend)
+        gatewayTransport?.sendAudio(toSend)
+        // Reiniciar estado de entrega: esperamos los acuses de recibo.
+        DispatchQueue.main.async {
+            self.lastMessageDeliveredTo = []
+            self.lastMessageStatus = "Enviado · esperando confirmación…"
+        }
         // Confirmación local por voz de que se envió.
         let who = peerName != nil ? "a \(peerName!)" : "al grupo"
         let u = AVSpeechUtterance(string: "Mensaje enviado \(who)")
@@ -634,6 +640,35 @@ final class NetworkBridgeController: ObservableObject {
         DispatchQueue.main.async { self.speech.speak(u) }
         log.info(.bridge, "Mensaje de texto enviado (\(who)): \(clean)")
     }
+
+    /// Envía un acuse de recibo (ack) al emisor de un mensaje de texto.
+    /// El targetId lleva MI nameId para que el emisor sepa quién recibió.
+    private func sendAck() {
+        guard isRunning else { return }
+        let channeled = VoiceChannel.wrap(Data(), type: .ack, targetId: myNameId)
+        let toSend = meshEnabled ? mesh.wrapOutgoing(channeled) : channeled
+        transport.sendAudio(toSend)
+        gatewayTransport?.sendAudio(toSend)
+    }
+
+    /// Procesa un acuse de recibo recibido: marca que ese rider recibió el mensaje.
+    private func handleAck(fromNameId id: UInt32) {
+        let name = nameForId(id)
+        guard !name.isEmpty else { return }
+        DispatchQueue.main.async {
+            if !self.lastMessageDeliveredTo.contains(name) {
+                self.lastMessageDeliveredTo.append(name)
+            }
+            self.lastMessageStatus = "Entregado a " + self.lastMessageDeliveredTo.joined(separator: ", ") + " ✓"
+        }
+        log.info(.bridge, "Acuse de recibo de \(name)")
+    }
+
+    /// Estado del último mensaje de texto enviado (para mostrar "Entregado ✓").
+    /// Lista de nombres de riders que confirmaron recibir el último mensaje.
+    @Published private(set) var lastMessageDeliveredTo: [String] = []
+    /// Texto de estado del último mensaje para la UI (ej. "Entregado a Juan").
+    @Published private(set) var lastMessageStatus: String = ""
 
     /// ¿Está transmitiendo una alarma ahora?
     @Published private(set) var alarmActive = false
@@ -803,6 +838,7 @@ final class NetworkBridgeController: ObservableObject {
             u.voice = AVSpeechSynthesisVoice(language: "es-MX")
             DispatchQueue.main.async { self.speech.speak(u) }
             log.info(.bridge, "Mensaje de texto recibido (de \(who.isEmpty ? "grupo" : who)): \(text)")
+            sendAck()   // confirmar al emisor que lo recibí
         case .subgroup:
             // Subgrupo: solo proceso si mi nameId está en la lista de destinatarios.
             guard msg.targets.contains(myNameId) else { break }
@@ -812,10 +848,14 @@ final class NetworkBridgeController: ObservableObject {
                 u.voice = AVSpeechSynthesisVoice(language: "es-MX")
                 DispatchQueue.main.async { self.speech.speak(u) }
                 log.info(.bridge, "Texto de subgrupo recibido: \(text)")
+                sendAck()   // confirmar recibo del texto de subgrupo
             } else {
                 noteVoiceActivity()
                 audioIO.playReceivedAudio(msg.audio)
             }
+        case .ack:
+            // Acuse de recibo de un mensaje que YO envié: marcar entregado.
+            handleAck(fromNameId: msg.targetId)
         }
         DispatchQueue.main.async { self.packetsReceived += 1 }
     }

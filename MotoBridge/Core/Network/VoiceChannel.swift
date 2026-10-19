@@ -26,6 +26,7 @@ enum VoiceChannelType: UInt8 {
     case text = 3
     case subgroup = 4
     case presence = 5
+    case ack = 6              // acuse de recibo de un mensaje de texto (targetId = nameId del receptor)
 }
 
 enum VoiceChannel {
