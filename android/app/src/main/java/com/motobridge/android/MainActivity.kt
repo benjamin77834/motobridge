@@ -326,6 +326,30 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
         }
     }
 
+    // Modo Walkie-Talkie: altavoz + mic del teléfono, manos libres (sin audífonos).
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (controller.walkieMode) Color(0xFF1E3A1A) else Color(0xFF1C1C1E))
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("📣 MODO WALKIE-TALKIE", fontSize = 12.sp,
+                         color = Color(0xFF34C759), fontWeight = FontWeight.SemiBold)
+                    Text("Altavoz y micrófono del teléfono, manos libres. Para campismo, cuevas y emergencias.",
+                         fontSize = 11.sp, color = Color.Gray)
+                }
+                Switch(checked = controller.walkieMode,
+                       onCheckedChange = { controller.updateWalkieMode(it) })
+            }
+            if (controller.walkieMode) {
+                Text("Deja el teléfono y habla: todos se oyen por el altavoz. Conviene turnarse para hablar (puede haber algo de eco).",
+                     fontSize = 11.sp, color = Color(0xFFAAD9A0))
+            }
+        }
+    }
+
     // Mensaje escrito → leído por voz en el casco
     var messageField by remember { mutableStateOf("") }
     Card(Modifier.fillMaxWidth()) {

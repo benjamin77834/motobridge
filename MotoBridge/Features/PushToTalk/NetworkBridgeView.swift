@@ -18,6 +18,7 @@ struct NetworkBridgeView: View {
                 statusCard          // estado + iniciar/detener
                 radarCard           // LED de cercanía de cada rider
                 outputCard          // switch Cascos <-> Bocinas (arriba, fácil alcance)
+                walkieCard          // modo walkie-talkie (altavoz del teléfono)
                 pttCard             // botón de hablar + manos libres
                 messageCard         // mensaje escrito leído por voz
                 quickChannelCard    // privado rápido + volver al grupo
@@ -436,6 +437,30 @@ struct NetworkBridgeView: View {
         }
         .cardStyle()
         .onAppear { controller.refreshMusicState() }
+    }
+
+    // Modo Walkie-Talkie: altavoz + micrófono del teléfono, manos libres (sin
+    // audífonos). Para campismo, cuevas y emergencias.
+    private var walkieCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { controller.walkieMode },
+                set: { controller.updateWalkieMode($0) }
+            )) {
+                Label("Modo Walkie-Talkie", systemImage: "dot.radiowaves.left.and.right")
+                    .font(.headline)
+            }
+            .tint(.green)
+
+            Text("Altavoz y micrófono del teléfono, manos libres. Para campismo, cuevas y emergencias (sin audífonos).")
+                .font(.caption).foregroundStyle(.secondary)
+
+            if controller.walkieMode {
+                Text("Deja el teléfono y habla: todos se oyen por el altavoz. Conviene turnarse para hablar (puede haber algo de eco).")
+                    .font(.caption2).foregroundStyle(.green)
+            }
+        }
+        .cardStyle()
     }
 
     // Mensaje escrito → el casco del destinatario lo lee por voz (TTS).

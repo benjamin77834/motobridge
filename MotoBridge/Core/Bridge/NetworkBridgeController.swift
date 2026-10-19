@@ -153,6 +153,58 @@ final class NetworkBridgeController: ObservableObject {
     @Published private(set) var outputTarget: OutputTarget =
         OutputTarget(rawValue: UserDefaults.standard.string(forKey: "outputTarget") ?? "") ?? .headset
 
+    /// Modo Walkie-Talkie: usa el ALTAVOZ y micrófono del propio teléfono, en
+    /// manos libres (sin audífonos). Pensado para campismo, cuevas y
+    /// emergencias. El cancelador de eco del sistema (modo .voiceChat) reduce
+    /// el acople; aun así conviene turnarse para hablar.
+    @Published private(set) var walkieMode: Bool =
+        UserDefaults.standard.bool(forKey: "walkieMode")
+
+    /// Activa/desactiva el modo Walkie-Talkie. Si el bridge está corriendo, se
+    /// reinicia el audio para aplicar la ruta (altavoz del teléfono).
+    func updateWalkieMode(_ on: Bool) {
+        guard walkieMode != on else { return }
+        walkieMode = on
+        UserDefaults.standard.set(on, forKey: "walkieMode")
+        log.info(.audioRoute, "Modo walkie-talkie: \(on ? "ON" : "OFF")")
+        guard isRunning else { return }
+        if on {
+            audioQueue.async { [weak self] in
+                guard let self else { return }
+                self.configureSessionForWalkie()
+                try? self.audioIO.start()
+                DispatchQueue.main.async { self.setTransmitting(true) }
+            }
+        } else {
+            // Volver al comportamiento normal según la salida elegida.
+            setTransmitting(false)
+            audioQueue.async { [weak self] in
+                guard let self else { return }
+                if self.outputTarget == .speakers {
+                    self.configureSessionForMusic(); self.audioIO.stop(); self.routeToCarPlayIfAvailable()
+                } else {
+                    self.configureAudioSession(); self.forcePreferredHFPInput(); try? self.audioIO.start()
+                }
+            }
+        }
+    }
+
+    /// Configura la sesión de audio para walkie-talkie: altavoz + mic del
+    /// teléfono, con cancelación de eco (modo .voiceChat) y salida forzada al
+    /// altavoz. No usa Bluetooth: es deliberadamente manos libres por el propio
+    /// teléfono.
+    private func configureSessionForWalkie() {
+        do {
+            try audioSession.setCategory(.playAndRecord, mode: .voiceChat,
+                                         options: [.defaultToSpeaker, .allowBluetooth])
+            try audioSession.setActive(true)
+            try audioSession.overrideOutputAudioPort(.speaker)
+            log.info(.audioRoute, "Walkie: sesión altavoz+mic activa")
+        } catch {
+            log.error(.audioRoute, "configureSessionForWalkie: \(error.localizedDescription)")
+        }
+    }
+
     /// Cambia el destino de salida (switch manual Cascos ↔ Bocinas).
     /// En bocinas: música por CarPlay/A2DP y se suelta el micrófono.
     /// En cascos: intercom por HFP con micrófono abierto para hablar.
@@ -920,6 +972,23 @@ final class NetworkBridgeController: ObservableObject {
         remoteControl.start()   // escuchar botones del intercom (Hysnox)
         startPresenceTimer()    // radar: latido de presencia
         log.info(.bridge, "NetworkBridge iniciado (\(mode.rawValue))")
+
+        // Modo Walkie-Talkie: altavoz + micrófono del teléfono, manos libres.
+        // Tiene prioridad sobre CallKit (que enrutaría a HFP, no al altavoz).
+        if walkieMode {
+            audioQueue.async { [weak self] in
+                guard let self else { return }
+                self.configureSessionForWalkie()
+                do {
+                    try self.audioIO.start()
+                    DispatchQueue.main.async { self.setTransmitting(true) }
+                    self.log.info(.audioSession, "Walkie-talkie iniciado (altavoz del teléfono)")
+                } catch {
+                    self.log.error(.audioSession, "No se pudo iniciar walkie: \(error.localizedDescription)")
+                }
+            }
+            return
+        }
 
         // Modo CallKit: el audio lo arranca el sistema en onActivateAudio.
         // El micrófono HFP del intercom se activa como en una llamada real.

@@ -70,6 +70,43 @@ class BridgeController(context: Context) {
     var outputTarget by mutableStateOf(prefs.getString("outputTarget", "headset") ?: "headset")
         private set
 
+    /** Modo Walkie-Talkie: usa el ALTAVOZ y micrófono del propio teléfono, en
+     *  manos libres (sin audífonos). Pensado para campismo, cuevas y emergencias.
+     *  El AEC del sistema reduce el eco; igual conviene turnarse para hablar. */
+    var walkieMode by mutableStateOf(prefs.getBoolean("walkieMode", false))
+        private set
+    fun updateWalkieMode(on: Boolean) {
+        if (walkieMode == on) return
+        walkieMode = on
+        prefs.edit().putBoolean("walkieMode", on).apply()
+        if (isRunning) {
+            if (on) {
+                routeToSpeakerphone(); audio.start(); updateTransmitting(true)
+            } else {
+                // Vuelve al comportamiento normal según la salida elegida.
+                updateTransmitting(false)
+                if (outputTarget == "speakers") { audio.stop(); routeToMedia() }
+                else { routeToHeadset(); audio.start() }
+            }
+        }
+    }
+
+    /** Enruta al ALTAVOZ del teléfono (speakerphone) con el micrófono del teléfono. */
+    private fun routeToSpeakerphone() {
+        try {
+            audioManager.mode = android.media.AudioManager.MODE_IN_COMMUNICATION
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                val spk = audioManager.availableCommunicationDevices.firstOrNull {
+                    it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+                }
+                if (spk != null) audioManager.setCommunicationDevice(spk)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.isSpeakerphoneOn = true
+            }
+        } catch (_: Exception) {}
+    }
+
     /** Cambia la salida. Bocinas = libera mic (música por A2DP/CarPlay).
      *  Cascos = intercom por el audífono/Hysnox (HFP/SCO). */
     fun setOutput(target: String) {
@@ -383,7 +420,13 @@ class BridgeController(context: Context) {
         isRunning = true
         detectAudioQuality()
         transport.start()
-        if (autoMusicMode) {
+        if (walkieMode) {
+            // Modo Walkie-Talkie: altavoz + micrófono del teléfono, manos libres.
+            // Pensado para campismo, cuevas y emergencias (sin audífonos).
+            routeToSpeakerphone()
+            audio.start()
+            updateTransmitting(true)
+        } else if (autoMusicMode) {
             // Arrancar en reposo: micrófono liberado, música full. Se abre al hablar.
             audioFocus = AudioFocusState.MUSIC
             lastVoiceActivity = 0L
