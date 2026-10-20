@@ -171,6 +171,34 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
         }
     }
 
+    // Modo Rescate: localizar persona atrapada sin GPS (altímetro + batería).
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (controller.rescueMode) Color(0xFF3A1A1A) else Color(0xFF1C1C1E))
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("🚑 MODO RESCATE", fontSize = 12.sp,
+                         color = Color(0xFFFF3B30), fontWeight = FontWeight.SemiBold)
+                    Text("Localiza a una persona sin GPS (terremoto, derrumbe, cueva). Estima en qué piso está con el barómetro.",
+                         fontSize = 11.sp, color = Color.Gray)
+                }
+                Switch(checked = controller.rescueMode,
+                       onCheckedChange = { controller.updateRescueMode(it) })
+            }
+            if (controller.rescueMode) {
+                val sensorTxt = if (controller.rescueSensors.hasBarometer)
+                    "Barómetro activo. La altura de cada persona aparece en el radar."
+                else "⚠️ Este teléfono no tiene barómetro: no puede estimar pisos (sí nombre y señal)."
+                Text(sensorTxt, fontSize = 11.sp, color = Color(0xFFD9A0A0))
+                Text("Aproximado: concreto y clima afectan. Apoyo al rescate, NO reemplaza al 911 ni a Protección Civil.",
+                     fontSize = 10.sp, color = Color.Gray)
+            }
+        }
+    }
+
     // Radar de riders: LED de color por cercanía
     if (controller.isRunning && controller.riderSignals.isNotEmpty()) {
         Card(Modifier.fillMaxWidth()) {
@@ -188,11 +216,39 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
                         BridgeController.RiderSignal.Level.FAR -> "lejos (${sig.hops} saltos)"
                         BridgeController.RiderSignal.Level.LOST -> "fuera de alcance"
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(16.dp).clip(CircleShape).background(c))
-                        Spacer(Modifier.width(10.dp))
-                        Text(sig.name, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                        Text(label, fontSize = 12.sp, color = Color.Gray)
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(16.dp).clip(CircleShape).background(c))
+                            Spacer(Modifier.width(10.dp))
+                            Text(sig.name, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                            Text(label, fontSize = 12.sp, color = Color.Gray)
+                        }
+                        // Modo Rescate: altura (metros + pisos) y batería del otro.
+                        if (controller.rescueMode) {
+                            val meters = controller.metersTo(sig)
+                            val altText = if (meters == null) "Altura: sin dato"
+                                else {
+                                    val m = Math.abs(meters)
+                                    if (m < 1.0) "Mismo nivel que tú (±1 m)"
+                                    else {
+                                        val dir = if (meters > 0) "ARRIBA" else "ABAJO"
+                                        val floors = controller.floorsTo(sig) ?: 0
+                                        val n = Math.abs(floors)
+                                        val pisoTxt = if (n == 0) "" else " (${n} ${if (n == 1) "piso" else "pisos"})"
+                                        "≈ ${String.format("%.0f", m)} m $dir$pisoTxt"
+                                    }
+                                }
+                            val bat = sig.batteryPercent
+                            Row(Modifier.padding(start = 26.dp, top = 2.dp)) {
+                                Text(altText, fontSize = 11.sp,
+                                     color = if (meters != null && Math.abs(meters) < 1.0) Color(0xFF34C759) else Color(0xFFFF9500))
+                                if (bat != null) {
+                                    Spacer(Modifier.width(10.dp))
+                                    Text("🔋 $bat%", fontSize = 11.sp,
+                                         color = if (bat <= 15) Color(0xFFFF3B30) else Color.Gray)
+                                }
+                            }
+                        }
                     }
                 }
                 Text("🟢 cerca · 🟡 lejos · 🔴 fuera de alcance", fontSize = 11.sp, color = Color.Gray)

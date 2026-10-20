@@ -187,8 +187,15 @@ class BridgeController(context: Context) {
         audio.codec = if (on) runCatching { OpusCodec() }.getOrDefault(PcmCodec()) else PcmCodec()
     }
 
-    // Radar de riders (LED por saltos).
-    data class RiderSignal(val name: String, var hops: Int, var lastSeen: Long) {
+    // Radar de riders (LED por saltos). altitudeMeters/batteryPercent llegan
+    // solo en latidos de Modo Rescate (null si el otro no los envía).
+    data class RiderSignal(
+        val name: String,
+        var hops: Int,
+        var lastSeen: Long,
+        var altitudeMeters: Double? = null,
+        var batteryPercent: Int? = null,
+    ) {
         enum class Level { NEAR, FAR, LOST }
         fun level(): Level {
             val age = System.currentTimeMillis() - lastSeen
@@ -201,21 +208,92 @@ class BridgeController(context: Context) {
     private var presenceHandler: android.os.Handler? = null
     private var presenceRunnable: Runnable? = null
 
-    private fun noteRiderSeen(name: String, hops: Int) {
+    private fun noteRiderSeen(name: String, hops: Int,
+                             altitudeMeters: Double? = null, batteryPercent: Int? = null) {
         if (name == localName) return
         val list = riderSignals.toMutableList()
         val idx = list.indexOfFirst { it.name == name }
-        if (idx >= 0) { list[idx].hops = hops; list[idx].lastSeen = System.currentTimeMillis() }
-        else list.add(RiderSignal(name, hops, System.currentTimeMillis()))
+        if (idx >= 0) {
+            list[idx].hops = hops; list[idx].lastSeen = System.currentTimeMillis()
+            if (altitudeMeters != null) list[idx].altitudeMeters = altitudeMeters
+            if (batteryPercent != null) list[idx].batteryPercent = batteryPercent
+        } else {
+            list.add(RiderSignal(name, hops, System.currentTimeMillis(), altitudeMeters, batteryPercent))
+        }
         riderSignals = list
+    }
+
+    /** Parsea el payload de presencia: primera línea = nombre; líneas ALT=/BAT=
+     *  (opcionales) = datos de Modo Rescate. Compatible con el formato de iOS. */
+    private fun parsePresence(payload: ByteArray): Triple<String, Double?, Int?>? {
+        val text = String(payload, Charsets.UTF_8)
+        val lines = text.split("\n")
+        val name = lines.firstOrNull()?.trim() ?: return null
+        if (name.isBlank()) return null
+        var alt: Double? = null
+        var bat: Int? = null
+        for (line in lines.drop(1)) {
+            when {
+                line.startsWith("ALT=") -> alt = line.removePrefix("ALT=").toDoubleOrNull()
+                line.startsWith("BAT=") -> bat = line.removePrefix("BAT=").toIntOrNull()
+            }
+        }
+        return Triple(name, alt, bat)
     }
 
     private fun sendPresence() {
         if (!isRunning || localName.isBlank()) return
-        val payload = localName.toByteArray(Charsets.UTF_8)
+        var text = localName
+        if (rescueMode) {
+            rescueSensors.relativeAltitudeMeters?.let { text += "\nALT=${String.format("%.2f", it)}" }
+            currentBatteryPercent()?.let { text += "\nBAT=$it" }
+        }
+        val payload = text.toByteArray(Charsets.UTF_8)
         val channeled = com.motobridge.android.net.VoiceChannel.wrap(payload, com.motobridge.android.net.VoiceChannel.PRESENCE, 0)
         val toSend = if (meshEnabled) mesh.wrapOutgoing(channeled) else channeled
         transport.sendAudio(toSend, toSend.size)
+    }
+
+    // MARK: Modo Rescate (localizar persona atrapada sin GPS)
+
+    /** Sensores del teléfono: barómetro (altura/pisos) + brújula. */
+    val rescueSensors = RescueSensors(appContext)
+
+    /** ¿Está activo el Modo Rescate? Al activarse, el latido de presencia incluye
+     *  la altura barométrica y la batería, y se arrancan los sensores. */
+    var rescueMode by mutableStateOf(prefs.getBoolean("rescueMode", false))
+        private set
+    fun updateRescueMode(on: Boolean) {
+        if (rescueMode == on) return
+        rescueMode = on
+        prefs.edit().putBoolean("rescueMode", on).apply()
+        if (on) {
+            rescueSensors.onUpdate = { riderSignals = riderSignals.toList() }
+            rescueSensors.start()
+        } else {
+            rescueSensors.stop()
+        }
+    }
+
+    /** Batería del propio teléfono (0–100), o null si no se sabe. */
+    private fun currentBatteryPercent(): Int? {
+        val bm = appContext.getSystemService(Context.BATTERY_SERVICE) as? android.os.BatteryManager
+        val lvl = bm?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: return null
+        return if (lvl in 0..100) lvl else null
+    }
+
+    /** Diferencia de ALTURA en metros entre OTRA persona y yo, con signo.
+     *  Positivo = la otra persona está ARRIBA; negativo = ABAJO. null si falta dato. */
+    fun metersTo(sig: RiderSignal): Double? {
+        val theirAlt = sig.altitudeMeters ?: return null
+        val myAlt = rescueSensors.relativeAltitudeMeters ?: return null
+        return theirAlt - myAlt
+    }
+
+    /** Diferencia de PISOS entre OTRA persona y yo, con signo. */
+    fun floorsTo(sig: RiderSignal): Int? {
+        val m = metersTo(sig) ?: return null
+        return RescueSensors.floorsFrom(m)
     }
 
     private fun startPresenceTimer() {
@@ -305,8 +383,9 @@ class BridgeController(context: Context) {
         val msg = com.motobridge.android.net.VoiceChannel.unwrap(data)
         if (msg == null) { audio.playFrom(peerId, data); return }
         if (msg.type == com.motobridge.android.net.VoiceChannel.PRESENCE) {
-            val name = String(msg.audio, Charsets.UTF_8)
-            if (name.isNotBlank()) noteRiderSeen(name, hops)
+            // Primera línea = nombre; en Modo Rescate trae ALT=/BAT= extra.
+            val info = parsePresence(msg.audio)
+            if (info != null) noteRiderSeen(info.first, hops, info.second, info.third)
             return
         }
         when (msg.type) {
@@ -440,12 +519,17 @@ class BridgeController(context: Context) {
         }
         remote.start()
         startPresenceTimer()  // radar: latido de presencia
+        if (rescueMode) {     // altímetro + brújula para rescate
+            rescueSensors.onUpdate = { riderSignals = riderSignals.toList() }
+            rescueSensors.start()
+        }
     }
 
     fun stop() {
         if (!isRunning) return
         isRunning = false
         stopPresenceTimer()
+        rescueSensors.stop()
         remote.stop()
         stopFocusTimer()
         audioFocus = AudioFocusState.MUSIC
