@@ -17,6 +17,13 @@ import com.motobridge.android.net.TransportState
  */
 class BridgeController(context: Context) {
 
+    companion object {
+        /** Instancia activa, para que el BridgeService (notificación "Detener")
+         *  pueda parar el bridge. Se asigna al construir el controlador. */
+        @Volatile var shared: BridgeController? = null
+            private set
+    }
+
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences("monobridge", Context.MODE_PRIVATE)
     private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
@@ -325,6 +332,7 @@ class BridgeController(context: Context) {
     fun updateMesh(on: Boolean) { meshEnabled = on }
 
     init {
+        shared = this
         wire()
         initTTS() // aviso por voz al conectar riders
         // Opus OFF por defecto (PCM es estable; Opus se activa manual en ambos).
@@ -497,6 +505,9 @@ class BridgeController(context: Context) {
     fun start() {
         if (isRunning) return
         isRunning = true
+        // Servicio en primer plano: mantiene audio y red vivos con la pantalla
+        // apagada (si no, Android suspende el proceso al dormir el teléfono).
+        BridgeService.start(appContext)
         detectAudioQuality()
         transport.start()
         if (walkieMode) {
@@ -538,6 +549,7 @@ class BridgeController(context: Context) {
         transport.stop()
         audio.stop()
         routeToMedia() // restaurar modo normal al salir
+        BridgeService.stop(appContext) // quitar servicio en primer plano
     }
 
     /** Lee los botones multimedia del intercom (Hysnox) vía MediaSession:

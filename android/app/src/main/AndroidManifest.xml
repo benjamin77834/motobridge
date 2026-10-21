@@ -13,6 +13,12 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Notificaciones (Android 13+): avisar cuando un rider se conecta -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Servicio en primer plano: mantener el intercom vivo con la pantalla
+         apagada (si no, Android mata el audio y la red al dormir el proceso). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Mantener la CPU despierta mientras el bridge está activo. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <uses-feature
         android:name="android.hardware.microphone"
@@ -49,5 +55,12 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- Servicio en primer plano: mantiene audio + red vivos con la
+             pantalla apagada o la app en segundo plano. -->
+        <service
+            android:name=".BridgeService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
     </application>
 </manifest>
