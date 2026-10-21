@@ -13,7 +13,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     TARGETED_DEVICE_FAMILY: "1,2" # iPhone + iPad (para probar el bridge por red)
     MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "5"
+    CURRENT_PROJECT_VERSION: "6"
 
 packages:
   Opus:
@@ -34,7 +34,7 @@ targets:
       - package: Opus
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.motobridge.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.motobridge.app.monkeyfon
         INFOPLIST_FILE: MotoBridge/Resources/Info.plist
         GENERATE_INFOPLIST_FILE: NO
         ENABLE_PREVIEWS: YES
