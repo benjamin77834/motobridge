@@ -29,9 +29,12 @@ struct NetworkBridgeView: View {
         }
         .navigationTitle("Mono Bridge")
         .onAppear {
-            // Detectar audífonos al abrir, para que AirPods/Beats aparezcan solos
-            // y el botón rápido esté listo sin pulsar nada.
-            if !controller.isRunning { controller.prepareAudioRoutes() }
+            // NO activamos la sesión de grabación aquí: hacerlo al abrir la app
+            // accede al micrófono en frío y puede terminar el proceso en un
+            // dispositivo limpio (causa del rechazo de Apple por crash al inicio).
+            // La detección de audífonos ocurre por el observador de routeChange
+            // y al pulsar "Detectar audífonos" o "Iniciar bridge".
+            controller.refreshMusicState()
         }
         .sheet(isPresented: $showSettings) {
             NavigationStack {

@@ -1105,6 +1105,12 @@ final class NetworkBridgeController: ObservableObject {
     /// Configura la sesión de audio, arranca captura/reproducción y descubrimiento.
     func start() {
         guard !isRunning else { return }
+        // Pedir permiso de micrófono si aún no se ha decidido. Se hace aquí (al
+        // iniciar el bridge, acción explícita del usuario) y NO al abrir la app,
+        // para no acceder al micrófono en frío (causa del crash al arranque).
+        if AVAudioApplication.shared.recordPermission == .undetermined {
+            AVAudioApplication.requestRecordPermission { _ in }
+        }
         isRunning = true
         // El descubrimiento de red arranca de inmediato (barato y seguro en main).
         transport.start()

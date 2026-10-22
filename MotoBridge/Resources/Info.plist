@@ -49,11 +49,6 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
-		<string>voip</string>
-		<string>bluetooth-central</string>
-		<string>remote-notification</string>
-		<string>external-accessory</string>
-		<string>location</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
