@@ -56,6 +56,13 @@ class AudioIO {
         SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
     ).coerceAtLeast(1024)
 
+    /** Sample rate REAL que el hardware concedió a la captura. Puede diferir de
+     *  SAMPLE_RATE (16 kHz) en equipos de gama baja: VOICE_COMMUNICATION suele
+     *  entregar 8 kHz, o el chip cae a 48 kHz. Si no es 16 kHz, resampleamos a
+     *  16 kHz ANTES de enviar, porque el receptor (iOS/Android) asume 16 kHz
+     *  fijos; si no, la voz se oye "borracha" (grave/lenta) y con retardo. */
+    private var captureRate = SAMPLE_RATE
+
     @SuppressLint("MissingPermission") // el permiso RECORD_AUDIO se pide en la UI antes de start()
     fun start() {
         if (running) return
@@ -68,6 +75,11 @@ class AudioIO {
             inBufSize
         )
         record = rec
+        // Tasa real concedida por el hardware (puede no ser 16 kHz).
+        captureRate = rec.sampleRate.takeIf { it > 0 } ?: SAMPLE_RATE
+        if (captureRate != SAMPLE_RATE) {
+            Log.w(TAG, "Captura a $captureRate Hz (pedido $SAMPLE_RATE); se resampleará a $SAMPLE_RATE")
+        }
 
         // Cancelación de eco y supresión de ruido si el dispositivo las soporta.
         if (AcousticEchoCanceler.isAvailable()) {
@@ -109,6 +121,8 @@ class AudioIO {
             val sendBlock = 320
             val acc = ShortArray(sendBlock)
             var accLen = 0
+            val needResample = captureRate != SAMPLE_RATE
+            resetResampler()
             while (running) {
                 val n = rec.read(buffer, 0, buffer.size)
                 if (n <= 0) continue
@@ -118,15 +132,21 @@ class AudioIO {
 
                 if (!isTransmitting) { accLen = 0; continue }
 
-                // Ganancia de captura con clamp + realce de voz.
+                // Ganancia de captura con clamp.
                 applyGain(buffer, n, captureGain)
-                enhance(buffer, n)
+
+                // Resamplear a 16 kHz si el hardware capturó a otra tasa. Así el
+                // receptor (que asume 16 kHz) oye la voz a tono/velocidad normal.
+                val (samples, count) = if (needResample) resampleTo16k(buffer, n) else Pair(buffer, n)
+
+                // Realce de voz a 16 kHz (los filtros están diseñados a 16 kHz).
+                enhance(samples, count)
 
                 // Acumular y emitir en bloques fijos de 320 muestras.
                 var idx = 0
-                while (idx < n) {
-                    val take = minOf(sendBlock - accLen, n - idx)
-                    System.arraycopy(buffer, idx, acc, accLen, take)
+                while (idx < count) {
+                    val take = minOf(sendBlock - accLen, count - idx)
+                    System.arraycopy(samples, idx, acc, accLen, take)
                     accLen += take; idx += take
                     if (accLen == sendBlock) {
                         emitBlock(acc, sendBlock)
@@ -236,6 +256,46 @@ class AudioIO {
                 }
             }
         }
+    }
+
+    // --- Resampler lineal a 16 kHz (para captura que no entrega 16 kHz) ---
+    // Mantiene estado entre bloques (última muestra + fase) para que la voz no
+    // tenga clics ni saltos en las fronteras de bloque. Buffer de salida reusado
+    // dimensionado al peor caso (upsampling).
+    private var rsLastSample = 0f
+    private var rsPhase = 0.0
+    private var rsOut = ShortArray(0)
+
+    private fun resetResampler() {
+        rsLastSample = 0f
+        rsPhase = 0.0
+    }
+
+    /** Resamplea `length` muestras de `captureRate` a 16 kHz por interpolación
+     *  lineal. Devuelve el buffer de salida y cuántas muestras válidas tiene. */
+    private fun resampleTo16k(input: ShortArray, length: Int): Pair<ShortArray, Int> {
+        if (length <= 0) return Pair(input, 0)
+        val step = captureRate.toDouble() / SAMPLE_RATE.toDouble() // muestras de entrada por cada muestra de salida
+        // Cota superior de muestras de salida para este bloque.
+        val maxOut = ((length / step) + 2).toInt() + 1
+        if (rsOut.size < maxOut) rsOut = ShortArray(maxOut)
+        var outCount = 0
+        var phase = rsPhase
+        // Interpolamos entre prev (muestra anterior, puede venir del bloque pasado)
+        // y la muestra actual del input, según la fase fraccionaria.
+        while (phase < length) {
+            val i = phase.toInt()
+            val frac = (phase - i).toFloat()
+            val prev = if (i == 0) rsLastSample else input[i - 1].toFloat()
+            val cur = input[i].toFloat()
+            val v = prev + (cur - prev) * frac
+            rsOut[outCount++] = v.toInt().coerceIn(-32768, 32767).toShort()
+            phase += step
+        }
+        // Guardar estado para el siguiente bloque: última muestra y fase sobrante.
+        rsLastSample = input[length - 1].toFloat()
+        rsPhase = phase - length
+        return Pair(rsOut, outCount)
     }
 
     private fun applyGain(samples: ShortArray, length: Int, gain: Float) {

@@ -142,6 +142,7 @@ final class AudioIO {
         playerNode.stop()
         engine.stop()
         captureConverter = nil
+        pendingPlaybackBuffers = 0
         isRunning = false
         log.info(.audioSession, "AudioIO detenido")
     }
@@ -219,6 +220,15 @@ final class AudioIO {
     var codec: AudioCodec = PCMCodec()
     private let opusDecoder = OpusCodec()  // para decodificar paquetes Opus entrantes
 
+    /// Jitter buffer con tope: cuántos buffers hay encolados en el playerNode
+    /// pendientes de reproducir. Sin esto, si el emisor (p. ej. Android) manda a
+    /// un ritmo de reloj ligeramente distinto, la cola crece y la latencia
+    /// aumenta sin parar. Acotamos a ~120 ms (6 bloques de 20 ms) y descartamos
+    /// el audio nuevo si ya hay demasiado pendiente (preferimos voz reciente a
+    /// bajo retardo).
+    private var pendingPlaybackBuffers = 0
+    private let maxPendingPlaybackBuffers = 6
+
     /// Aplica ganancia digital a un buffer Int16 con recorte suave (clamp) para
     /// evitar saturación que distorsione la voz.
     private func applyGain(to buffer: AVAudioPCMBuffer, gain: Float) {
@@ -249,6 +259,9 @@ final class AudioIO {
     /// Recibe Data (1 byte de códec + payload) y la reproduce.
     func playReceivedAudio(_ packet: Data) {
         guard isRunning, packet.count > 1 else { return }
+        // Tope de jitter buffer: si ya hay demasiado audio esperando, descartar
+        // este paquete para que la latencia no crezca (desfase de reloj emisor).
+        if pendingPlaybackBuffers >= maxPendingPlaybackBuffers { return }
         // Leer cabecera de códec y decodificar el payload.
         let codecByte = packet[packet.startIndex]
         let payload = packet.subdata(in: (packet.startIndex + 1)..<packet.endIndex)
@@ -280,7 +293,11 @@ final class AudioIO {
 
         guard status != .error, outBuffer.frameLength > 0 else { return }
         applyFloatGain(to: outBuffer, gain: outputGain)
-        playerNode.scheduleBuffer(outBuffer, completionHandler: nil)
+        pendingPlaybackBuffers += 1
+        playerNode.scheduleBuffer(outBuffer) { [weak self] in
+            // El buffer terminó de reproducirse: liberar un espacio del jitter buffer.
+            DispatchQueue.main.async { self?.pendingPlaybackBuffers -= 1 }
+        }
     }
 
     // MARK: - Serialización PCM Int16 <-> Data
