@@ -33,7 +33,9 @@ final class NetworkBridgeController: ObservableObject {
     private var gatewayTransport: AudioTransport?
 
     /// Modo de transporte. No se puede cambiar mientras el bridge corre.
-    @Published private(set) var mode: TransportMode = .apple
+    /// Por defecto Auto (.gateway): corre Apple + Universal a la vez, así conecta
+    /// con cualquiera sin que el usuario tenga que elegir el canal correcto.
+    @Published private(set) var mode: TransportMode = TransportMode(rawValue: UserDefaults.standard.string(forKey: "transportMode") ?? "") ?? .gateway
 
     @Published private(set) var isRunning = false
     @Published private(set) var isTransmitting = false
@@ -46,6 +48,12 @@ final class NetworkBridgeController: ObservableObject {
     @Published private(set) var connectedPeers: [TransportPeer] = []
     @Published private(set) var events: [String] = []
     @Published private(set) var localName: String = ""
+
+    // Estado POR CANAL para el modo Auto (los dos a la vez). La UI resalta el
+    // que esté conectando. Apple = Multipeer (iPhone↔iPhone); Universal = WiFi
+    // (iPhone↔Android y también iPhone↔iPhone como respaldo).
+    @Published private(set) var applePeerCount = 0
+    @Published private(set) var universalPeerCount = 0
 
     /// Nombre del rider (cómo te ven los demás). Se guarda y se aplica antes de
     /// conectar. Cambiarlo solo tiene efecto con el bridge detenido.
@@ -399,7 +407,9 @@ final class NetworkBridgeController: ObservableObject {
     }
 
     init() {
-        // Transporte inicial: Apple (Multipeer).
+        // Transporte inicial según el modo guardado (por defecto Auto). Se asigna
+        // peer provisionalmente para satisfacer el 'let'; applyModeTransports lo
+        // ajusta al final del init (puede levantar también el canal Universal).
         self.transport = peer
         wireTransport(peer)
 
@@ -495,6 +505,10 @@ final class NetworkBridgeController: ObservableObject {
         ) { [weak self] note in
             self?.handleRouteChange(note)
         }
+
+        // Armar los transportes según el modo guardado (por defecto Auto =
+        // Apple + Universal a la vez). Debe ir tras wireTransport inicial.
+        applyModeTransports()
     }
 
     /// Maneja un cambio de ruta de audio del sistema (p. ej. conectar AirPods).
@@ -943,6 +957,13 @@ final class NetworkBridgeController: ObservableObject {
                 self.knownPeerNames = newNames
                 self.discoveredPeers = discovered
                 self.connectedPeers = connected
+                // Conteo del canal principal para resaltar el canal activo. En
+                // modo Universal puro el principal ES el canal WiFi.
+                if self.mode == .universal {
+                    self.universalPeerCount = connected.count
+                } else {
+                    self.applePeerCount = connected.count
+                }
                 // Radar: sembrar con los peers conectados (verde) aunque el
                 // latido de presencia aún no llegue. El presence refina los saltos.
                 for peer in connected { self.noteRiderSeen(peer.name, hops: 0) }
@@ -985,7 +1006,9 @@ final class NetworkBridgeController: ObservableObject {
         t.onPeersChange = { [weak self] _, connected in
             DispatchQueue.main.async {
                 guard let self else { return }
-                // Sembrar el radar con los riders Android conectados por el puente.
+                // Conteo del canal Universal (WiFi) en modo Auto, para resaltarlo.
+                self.universalPeerCount = connected.count
+                // Sembrar el radar con los riders conectados por el canal WiFi.
                 for peer in connected { self.noteRiderSeen(peer.name, hops: 0) }
             }
         }
@@ -1074,26 +1097,33 @@ final class NetworkBridgeController: ObservableObject {
     func setMode(_ newMode: TransportMode) {
         guard !isRunning, newMode != mode else { return }
         mode = newMode
+        UserDefaults.standard.set(newMode.rawValue, forKey: "transportMode")
+        applyModeTransports()
+        // Reset de estado visible.
+        state = .notConnected
+        discoveredPeers = []
+        connectedPeers = []
+        applePeerCount = 0
+        universalPeerCount = 0
+        events = []
+        log.info(.bridge, "Modo de transporte: \(newMode.rawValue)")
+    }
+
+    /// Arma los transportes según el modo actual (Apple, Universal o Auto=ambos).
+    private func applyModeTransports() {
         gatewayTransport = nil
-        switch newMode {
+        switch mode {
         case .apple:
             transport = peer
         case .universal:
             transport = LocalNetworkTransport()
         case .gateway:
-            // Puente: Multipeer (Apple) como transporte principal + Universal
-            // (Android/WiFi) como secundario. Se traducen entre sí.
+            // Auto: Multipeer (Apple) + Universal (WiFi) a la vez.
             transport = peer
             gatewayTransport = LocalNetworkTransport()
         }
         wireTransport(transport)
         if let gw = gatewayTransport { wireGatewayTransport(gw) }
-        // Reset de estado visible.
-        state = .notConnected
-        discoveredPeers = []
-        connectedPeers = []
-        events = []
-        log.info(.bridge, "Modo de transporte: \(newMode.rawValue)")
     }
 
     // MARK: - Control

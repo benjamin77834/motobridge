@@ -712,6 +712,28 @@ struct NetworkBridgeView: View {
         .cardStyle()
     }
 
+    /// Indicador de un canal en modo Auto: verde y fuerte si tiene conexión,
+    /// tenue si no. Deja ver cuál canal está llevando la conexión.
+    private func channelBadge(name: String, count: Int, hint: String) -> some View {
+        let active = count > 0
+        return HStack(spacing: 6) {
+            Circle()
+                .fill(active ? Color.green : Color.gray.opacity(0.4))
+                .frame(width: 10, height: 10)
+                .shadow(color: active ? Color.green.opacity(0.8) : .clear, radius: active ? 4 : 0)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(active ? "\(name) · \(count)" : name)
+                    .font(.caption.weight(active ? .bold : .regular))
+                    .foregroundStyle(active ? .green : .secondary)
+                Text(hint).font(.system(size: 9)).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(active ? Color.green.opacity(0.12) : Color.secondary.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .frame(maxWidth: .infinity)
+    }
+
     private var modeSelectorCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("2. Modo de conexión").font(.headline)
@@ -732,6 +754,17 @@ struct NetworkBridgeView: View {
 
             Text(controller.mode.explanation)
                 .font(.caption).foregroundStyle(.secondary)
+
+            // En modo Auto, mostrar los DOS canales y resaltar el que conecta.
+            if controller.mode == .gateway && controller.isRunning {
+                HStack(spacing: 10) {
+                    channelBadge(name: "Apple", count: controller.applePeerCount,
+                                 hint: "iPhone↔iPhone")
+                    channelBadge(name: "WiFi", count: controller.universalPeerCount,
+                                 hint: "Android / iPhone")
+                }
+                .padding(.top, 2)
+            }
 
             if controller.isRunning {
                 Text("Detén el bridge para cambiar de modo.")
