@@ -75,6 +75,7 @@ targets:
         INFOPLIST_FILE: MonoBridgeRelay/Info.plist
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: MonoBridgeRelay/MonoBridgeRelay.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
 
   MotoBridgeTests:

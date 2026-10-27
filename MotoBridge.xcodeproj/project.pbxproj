@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		002724A472D68AD28F8A2195 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14569E9F3FF76A9725C03102 /* WatchBridge.swift */; };
+		0434F6C4655E71B023C3DFEA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3D87CB699F2B1EF3A72E7B0C /* Assets.xcassets */; };
 		17CCAA91008E77F3494A1CA1 /* MeshRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */; };
 		28903BF099EABBC9505D341E /* AppIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = D73608A31D00D54C0275CF7A /* AppIcon.svg */; };
 		2A171020DEB4ECE9077F65F7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C42EBC7A7DBE2293B9D5EBE /* AppState.swift */; };
@@ -72,6 +73,7 @@
 		2826E967233D3C971337E9F8 /* AudioCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCodec.swift; sourceTree = "<group>"; };
 		288B6115B720CFEF4733A7CD /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		2ADA7F7E767C932537748638 /* MotoBridge.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MotoBridge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D87CB699F2B1EF3A72E7B0C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3DFB6FCF0D1AE67FB56C4653 /* IntercomDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntercomDevice.swift; sourceTree = "<group>"; };
 		47FAFD435FA35518B85EB99B /* AudioTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTransport.swift; sourceTree = "<group>"; };
 		500A3DA22CFF9C2552638BF7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -114,6 +116,7 @@
 		022D1C67B82E3833360CE595 /* MonoBridgeRelay */ = {
 			isa = PBXGroup;
 			children = (
+				3D87CB699F2B1EF3A72E7B0C /* Assets.xcassets */,
 				500A3DA22CFF9C2552638BF7 /* Info.plist */,
 				6902FEEC7673C8AFCEF20CBC /* MonoBridgeRelay.entitlements */,
 				FC10E228F756A59AB17CCE5A /* RadarView.swift */,
@@ -361,6 +364,7 @@
 			buildConfigurationList = DB77D2AC532211C4E63B90F8 /* Build configuration list for PBXNativeTarget "MonoBridgeRelay" */;
 			buildPhases = (
 				7851F35BD5E13B9CE647DDDC /* Sources */,
+				639B6C0BF0C2EF62C1C5B0B4 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -439,6 +443,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		639B6C0BF0C2EF62C1C5B0B4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0434F6C4655E71B023C3DFEA /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C14408AA5B8A263183993DF7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
