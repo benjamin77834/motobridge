@@ -21,7 +21,10 @@ enum PeerConnectionState: String {
 final class PeerBridgeSession: NSObject, ObservableObject {
 
     /// Nombre de servicio: máx 15 chars, solo [a-z0-9-] (requisito de MC).
-    static let serviceType = "motobridge"
+    /// DEBE ser distinto del Bonjour del canal Universal (`_motobridge._udp`):
+    /// si comparten huella, en modo Auto (ambos a la vez) colisionan en mDNS y
+    /// Multipeer no descubre a nadie. Por eso usamos "mbapple" (solo Apple).
+    static let serviceType = "mbapple"
 
     /// Máximo de riders en el grupo (común con Android). El anfitrión cuenta,
     /// así que son hasta MAX_PEERS conexiones = MAX_PEERS+1 personas... limitamos
@@ -276,7 +279,12 @@ extension PeerBridgeSession: MCNearbyServiceBrowserDelegate {
             addEvent("Grupo lleno, no invito a \(peerID.displayName)")
             return
         }
-        if myPeerID.displayName < peerID.displayName {
+        // Regla determinista: el displayName "menor" invita; el otro espera.
+        // Si los nombres son IGUALES (dos equipos sin nombre, o nombre repetido),
+        // desempatar por hash para que exactamente uno invite y no haya deadlock.
+        let me = myPeerID.displayName, other = peerID.displayName
+        let iInvite = me != other ? (me < other) : (me.hashValue < peerID.hashValue)
+        if iInvite {
             invite(peerID)
         } else {
             addEvent("Esperando invitación de \(peerID.displayName)")

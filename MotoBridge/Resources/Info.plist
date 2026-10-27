@@ -28,6 +28,8 @@
 	<string>MotoBridge usa Bluetooth para detectar y mostrar el estado de los intercomunicadores de moto cercanos.</string>
 	<key>NSBonjourServices</key>
 	<array>
+		<string>_mbapple._tcp</string>
+		<string>_mbapple._udp</string>
 		<string>_motobridge._tcp</string>
 		<string>_motobridge._udp</string>
 	</array>
