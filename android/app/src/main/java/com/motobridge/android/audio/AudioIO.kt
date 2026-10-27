@@ -105,12 +105,12 @@ class AudioIO {
             )
             .setBufferSizeInBytes(outBufSize)
             .setTransferMode(AudioTrack.MODE_STREAM)
-        // Modo de baja latencia: pide a Android el camino de audio rápido, para
-        // no sumar retardo propio encima del que ya mete el Bluetooth (audífonos
-        // como los Redmi ya son lentos en HFP; no empeoremos desde la app).
-        if (android.os.Build.VERSION.SDK_INT >= 26) {
-            trackBuilder.setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
-        }
+        // NOTA: NO usamos PERFORMANCE_MODE_LOW_LATENCY. El camino de audio
+        // "rápido" de Android ignora el control de volumen (botones del sistema)
+        // y la ganancia en algunos chips (p. ej. Redmi), dejando el micrófono y
+        // la escucha sin poder bajarse. El retardo de audífonos Bluetooth viene
+        // del propio Bluetooth (HFP), no de la app, así que ese modo apenas
+        // ayudaba y rompía el volumen. Usamos el camino normal.
         val tr = trackBuilder.build()
         track = tr
 
