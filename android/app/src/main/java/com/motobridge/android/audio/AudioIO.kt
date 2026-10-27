@@ -89,7 +89,7 @@ class AudioIO {
             ns = NoiseSuppressor.create(rec.audioSessionId)?.apply { enabled = true }
         }
 
-        val tr = AudioTrack.Builder()
+        val trackBuilder = AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
@@ -105,7 +105,13 @@ class AudioIO {
             )
             .setBufferSizeInBytes(outBufSize)
             .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
+        // Modo de baja latencia: pide a Android el camino de audio rápido, para
+        // no sumar retardo propio encima del que ya mete el Bluetooth (audífonos
+        // como los Redmi ya son lentos en HFP; no empeoremos desde la app).
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            trackBuilder.setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
+        }
+        val tr = trackBuilder.build()
         track = tr
 
         rec.startRecording()
