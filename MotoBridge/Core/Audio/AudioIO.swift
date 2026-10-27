@@ -166,6 +166,10 @@ final class AudioIO {
     /// se transmita, para diagnosticar si el micrófono realmente capta señal.
     var onInputLevel: ((Float) -> Void)?
 
+    /// Nivel de la voz ENTRANTE 0.0–1.0 (RMS del audio recibido). En Modo Rescate
+    /// se usa como medida de cercanía para el detector de rumbo (caliente/frío).
+    var onReceivedLevel: ((Float) -> Void)?
+
     private func handleCapturedBuffer(_ buffer: AVAudioPCMBuffer) {
         capturedBufferCount += 1
 
@@ -274,6 +278,11 @@ final class AudioIO {
         guard let data = pcm,
               let inBuffer = Self.buffer(from: data, format: networkFormat),
               let converter = playbackConverter else { return }
+
+        // Nivel de la voz ENTRANTE (señal del otro). Sirve en Modo Rescate como
+        // pista de cercanía: más fuerte = más cerca (imperfecto por el concreto,
+        // pero útil combinado con la brújula para el "caliente/frío con rumbo").
+        onReceivedLevel?(Self.rmsLevel(inBuffer))
 
         let targetFormat = converter.outputFormat
         let ratio = targetFormat.sampleRate / networkFormat.sampleRate

@@ -55,19 +55,30 @@ struct RescueCard: View {
 
     // Estado de los sensores del propio teléfono.
     private var sensorStatusRow: some View {
-        HStack(spacing: 16) {
-            Label(sensors.hasBarometer
-                  ? (sensors.relativeAltitudeMeters != nil ? "Altímetro OK" : "Altímetro…")
-                  : "Sin altímetro",
-                  systemImage: "barometer")
-                .font(.caption)
-                .foregroundStyle(sensors.hasBarometer ? .green : .secondary)
-            if let h = sensors.headingDegrees {
-                Label("\(compass(h)) \(Int(h))°", systemImage: "location.north.line")
-                    .font(.caption).foregroundStyle(.blue)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 16) {
+                Label(sensors.hasBarometer
+                      ? (sensors.relativeAltitudeMeters != nil ? "Altímetro OK" : "Altímetro…")
+                      : "Sin altímetro",
+                      systemImage: "barometer")
+                    .font(.caption)
+                    .foregroundStyle(sensors.hasBarometer ? .green : .secondary)
+                if let h = sensors.headingDegrees {
+                    Label("\(compass(h)) \(Int(h))°", systemImage: "location.north.line")
+                        .font(.caption).foregroundStyle(.blue)
+                } else {
+                    Label("Brújula…", systemImage: "location.north.line")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            // Rumbo recomendado por el detector caliente/frío (brújula + señal).
+            if let b = sensors.bestBearing {
+                Label("Señal más fuerte al \(compass(b)) — muévete en ese rumbo",
+                      systemImage: "scope")
+                    .font(.caption.weight(.semibold)).foregroundStyle(.green)
             } else {
-                Label("Brújula…", systemImage: "location.north.line")
-                    .font(.caption).foregroundStyle(.secondary)
+                Text("Gira despacio mientras la persona habla: marcará hacia dónde sube la señal.")
+                    .font(.caption2).foregroundStyle(.secondary)
             }
         }
     }

@@ -417,6 +417,12 @@ final class NetworkBridgeController: ObservableObject {
         audioIO.onInputLevel = { [weak self] level in
             DispatchQueue.main.async { self?.inputLevel = level }
         }
+        // Nivel de voz ENTRANTE -> detector de rumbo del Modo Rescate (la señal
+        // más fuerte indica hacia dónde conviene buscar, combinado con brújula).
+        audioIO.onReceivedLevel = { [weak self] level in
+            guard let self, self.rescueMode else { return }
+            DispatchQueue.main.async { self.rescueSensors.noteSignalSample(level) }
+        }
         // PTT remoto desde el Apple Watch -> activar/desactivar transmisión.
         watch.onPTTChange = { [weak self] transmitting in
             self?.setTransmitting(transmitting)

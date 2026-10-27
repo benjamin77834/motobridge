@@ -32,6 +32,50 @@ final class RescueSensors: NSObject, ObservableObject {
     /// Rumbo magnético del teléfono en grados (0 = Norte). nil si no disponible.
     @Published private(set) var headingDegrees: Double?
 
+    /// Detector de rumbo "caliente/frío": mientras el rescatista gira, se guarda
+    /// la fuerza de señal recibida en cada sector de brújula. `bestBearing` es el
+    /// rumbo (grados) donde la señal fue MÁS FUERTE = hacia dónde conviene ir.
+    /// nil hasta tener muestras. NO es una flecha exacta a la persona (sin GPS no
+    /// existe), es la dirección en la que la señal mejora.
+    @Published private(set) var bestBearing: Double?
+    @Published private(set) var bestBearingStrength: Float = 0
+    /// Señal por sector de 30° (12 sectores). Se desvanece con el tiempo para
+    /// que el rescatista pueda re-barrer y la medición no quede "pegada".
+    private var sectorStrength = [Float](repeating: 0, count: 12)
+    private var sectorTime = [Date](repeating: .distantPast, count: 12)
+
+    /// Alimenta el detector con una muestra de señal entrante (0–1), asociándola
+    /// al rumbo actual de la brújula. Llamar cuando llega voz del otro.
+    func noteSignalSample(_ level: Float) {
+        guard let h = headingDegrees, level > 0.01 else { return }
+        let sector = Int((h / 30.0).rounded(.down)) % 12
+        // Quedarse con el pico reciente de cada sector (decae con el tiempo).
+        if level >= sectorStrength[sector] {
+            sectorStrength[sector] = level
+            sectorTime[sector] = Date()
+        }
+        recomputeBest()
+    }
+
+    private func recomputeBest() {
+        var bestIdx = -1
+        var best: Float = 0
+        let now = Date()
+        for i in 0..<12 {
+            // Desvanecer muestras viejas (>12 s) para permitir re-barrido.
+            let age = now.timeIntervalSince(sectorTime[i])
+            let decayed = age > 12 ? 0 : sectorStrength[i] * Float(max(0, 1 - age / 12))
+            if decayed > best { best = decayed; bestIdx = i }
+        }
+        if bestIdx >= 0 {
+            bestBearing = Double(bestIdx) * 30 + 15  // centro del sector
+            bestBearingStrength = best
+        } else {
+            bestBearing = nil
+            bestBearingStrength = 0
+        }
+    }
+
     /// ¿El dispositivo tiene altímetro barométrico? (iPhone 6s+ casi todos).
     let hasBarometer: Bool = CMAltimeter.isRelativeAltitudeAvailable()
 
@@ -77,6 +121,10 @@ final class RescueSensors: NSObject, ObservableObject {
         relativeAltitudeMeters = nil
         pressureKPa = nil
         headingDegrees = nil
+        bestBearing = nil
+        bestBearingStrength = 0
+        sectorStrength = [Float](repeating: 0, count: 12)
+        sectorTime = [Date](repeating: .distantPast, count: 12)
     }
 
     /// Convierte una diferencia de altura (metros) a número de pisos con signo.
