@@ -26,11 +26,15 @@ final class RelaySession: NSObject, ObservableObject {
     @Published private(set) var events: [String] = []
 
     /// Un nodo visto en la malla (rider o repetidor), con su última señal.
+    /// altitudeMeters/batteryPercent llegan solo cuando el rider tiene activo el
+    /// Modo Rescate en su teléfono (los manda en el latido de presencia).
     struct RiderNode: Identifiable {
         var id: String { name }
         let name: String
         var hops: Int
         var lastSeen: Date
+        var altitudeMeters: Double? = nil
+        var batteryPercent: Int? = nil
         enum Level { case near, far, lost }
         var level: Level {
             let age = Date().timeIntervalSince(lastSeen)
@@ -38,6 +42,12 @@ final class RelaySession: NSObject, ObservableObject {
             return hops <= 1 ? .near : .far
         }
     }
+
+    /// Altura barométrica de referencia del propio nodo Mac. La Mac no tiene
+    /// barómetro, así que usamos la PRIMERA altura recibida como cero relativo
+    /// para mostrar diferencias entre riders de forma coherente. nil hasta que
+    /// llegue el primer dato.
+    private var referenceAltitude: Double?
 
     /// Nombre visible de este nodo Mac en la malla.
     let localName: String
@@ -90,16 +100,32 @@ final class RelaySession: NSObject, ObservableObject {
 
     // MARK: - Radar
 
-    private func noteRiderSeen(_ name: String, hops: Int) {
+    private func noteRiderSeen(_ name: String, hops: Int,
+                               altitudeMeters: Double? = nil, batteryPercent: Int? = nil) {
         guard name != localName else { return }
+        if let a = altitudeMeters, referenceAltitude == nil { referenceAltitude = a }
         DispatchQueue.main.async {
             if let i = self.riders.firstIndex(where: { $0.name == name }) {
                 self.riders[i].hops = hops
                 self.riders[i].lastSeen = Date()
+                if let a = altitudeMeters { self.riders[i].altitudeMeters = a }
+                if let b = batteryPercent { self.riders[i].batteryPercent = b }
             } else {
-                self.riders.append(RiderNode(name: name, hops: hops, lastSeen: Date()))
+                self.riders.append(RiderNode(name: name, hops: hops, lastSeen: Date(),
+                                             altitudeMeters: altitudeMeters, batteryPercent: batteryPercent))
             }
         }
+    }
+
+    /// Diferencia de altura (m) de un nodo respecto a la referencia del relay.
+    /// Positivo = ARRIBA; negativo = ABAJO. nil si falta dato. ~3 m por piso.
+    func floors(for node: RiderNode) -> Int? {
+        guard let a = node.altitudeMeters, let ref = referenceAltitude else { return nil }
+        return Int(((a - ref) / 3.0).rounded())
+    }
+    func metersDelta(for node: RiderNode) -> Double? {
+        guard let a = node.altitudeMeters, let ref = referenceAltitude else { return nil }
+        return a - ref
     }
 
     private func addEvent(_ text: String) {
@@ -163,12 +189,17 @@ extension RelaySession: MCSessionDelegate {
     private func handlePayload(_ data: Data, hops: Int) {
         guard let msg = VoiceChannel.unwrap(data) else { return }
         if msg.type == .presence {
-            // La primera línea del payload es el nombre del rider.
-            if let text = String(data: msg.audio, encoding: .utf8),
-               let first = text.split(separator: "\n", omittingEmptySubsequences: false).first,
-               !first.isEmpty {
-                noteRiderSeen(String(first), hops: hops)
+            // Primera línea = nombre; líneas ALT=/BAT= = datos del Modo Rescate.
+            guard let text = String(data: msg.audio, encoding: .utf8) else { return }
+            let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+            guard let first = lines.first, !first.isEmpty else { return }
+            var alt: Double? = nil
+            var bat: Int? = nil
+            for line in lines.dropFirst() {
+                if line.hasPrefix("ALT=") { alt = Double(line.dropFirst(4)) }
+                else if line.hasPrefix("BAT=") { bat = Int(line.dropFirst(4)) }
             }
+            noteRiderSeen(String(first), hops: hops, altitudeMeters: alt, batteryPercent: bat)
         }
     }
 

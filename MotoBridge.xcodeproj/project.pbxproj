@@ -26,6 +26,7 @@
 		7D24130E22540C70E52D7195 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C5059A7A9A5DD05947BACC5 /* Assets.xcassets */; };
 		89DB8051D90B9BB7AA5A6478 /* IntercomDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DFB6FCF0D1AE67FB56C4653 /* IntercomDevice.swift */; };
 		8D22C5026EA644FB635B06B8 /* VoiceChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */; };
+		97EF3F195FB248C10A7B31E7 /* RadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC10E228F756A59AB17CCE5A /* RadarView.swift */; };
 		9FE43B4358E991592EA8B9AE /* VoiceChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */; };
 		A5368E58837BF2A32D982652 /* NetworkBridgeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */; };
 		A8BF4C9B3F31E1637E9B5FE5 /* VoiceEnhancer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC83DDBF5548389BC949696 /* VoiceEnhancer.swift */; };
@@ -92,6 +93,7 @@
 		D00398E2CF63EB430C40CA29 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		D73608A31D00D54C0275CF7A /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
 		DC21EBD18C639E527A56D797 /* OpusCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCodec.swift; sourceTree = "<group>"; };
+		FC10E228F756A59AB17CCE5A /* RadarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarView.swift; sourceTree = "<group>"; };
 		FFD17445A42748BADDC08595 /* AudioDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDiagnosticsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -112,6 +114,7 @@
 			children = (
 				500A3DA22CFF9C2552638BF7 /* Info.plist */,
 				6902FEEC7673C8AFCEF20CBC /* MonoBridgeRelay.entitlements */,
+				FC10E228F756A59AB17CCE5A /* RadarView.swift */,
 				5830CE4282DEA1D89F851A0E /* RelayApp.swift */,
 				0830C76A43C6EA7F180FE856 /* RelaySession.swift */,
 			);
@@ -492,6 +495,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				17CCAA91008E77F3494A1CA1 /* MeshRelay.swift in Sources */,
+				97EF3F195FB248C10A7B31E7 /* RadarView.swift in Sources */,
 				663A38D6D9F86591AD0619D2 /* RelayApp.swift in Sources */,
 				2F621B630907BABCDB0B2374 /* RelaySession.swift in Sources */,
 				9FE43B4358E991592EA8B9AE /* VoiceChannel.swift in Sources */,

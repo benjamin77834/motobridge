@@ -36,6 +36,7 @@ struct RelayView: View {
             .buttonStyle(.borderedProminent)
             .tint(relay.running ? .red : .green)
 
+            radarVisual
             radarCard
             statsRow
             eventsCard
@@ -62,9 +63,18 @@ struct RelayView: View {
         }
     }
 
+    // Radar visual tipo pantalla de radar.
+    private var radarVisual: some View {
+        RadarView()
+            .frame(height: 260)
+            .padding(10)
+            .background(Color.black.opacity(0.35))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
     private var radarCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("RADAR DE NODOS").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Text("NODOS DETECTADOS").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             if relay.riders.isEmpty {
                 Text(relay.running ? "Buscando nodos en la malla…" : "Activa el nodo para empezar.")
                     .font(.callout).foregroundStyle(.secondary)
@@ -72,7 +82,12 @@ struct RelayView: View {
                 ForEach(relay.riders) { r in
                     HStack(spacing: 10) {
                         Circle().fill(color(r.level)).frame(width: 12, height: 12)
-                        Text(r.name).font(.body.weight(.medium))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(r.name).font(.body.weight(.medium))
+                            if let d = detail(r) {
+                                Text(d).font(.caption2).foregroundStyle(.orange)
+                            }
+                        }
                         Spacer()
                         Text(label(r.level, hops: r.hops))
                             .font(.caption).foregroundStyle(.secondary)
@@ -83,6 +98,22 @@ struct RelayView: View {
         .padding(14)
         .background(Color.gray.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// Detalle de altura/pisos + batería de un nodo (Modo Rescate).
+    private func detail(_ node: RelaySession.RiderNode) -> String? {
+        var parts: [String] = []
+        if let m = relay.metersDelta(for: node) {
+            let am = abs(m)
+            if am < 1 { parts.append("Mismo nivel") }
+            else {
+                let dir = m > 0 ? "ARRIBA" : "ABAJO"
+                let f = abs(relay.floors(for: node) ?? 0)
+                parts.append(f == 0 ? "≈\(Int(am)) m \(dir)" : "≈\(Int(am)) m \(dir) (\(f) pisos)")
+            }
+        }
+        if let b = node.batteryPercent { parts.append("🔋 \(b)%") }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     private var statsRow: some View {
