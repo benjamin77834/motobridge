@@ -35,11 +35,23 @@ final class RelaySession: NSObject, ObservableObject {
         var lastSeen: Date
         var altitudeMeters: Double? = nil
         var batteryPercent: Int? = nil
+        /// Rastro: historial de cercanía (menos saltos = más cerca). Guardamos
+        /// como "proximidad" 0..1 (1 = pegado, 0 = lejos) para la mini-gráfica.
+        var trail: [Double] = []
         enum Level { case near, far, lost }
         var level: Level {
             let age = Date().timeIntervalSince(lastSeen)
             if age > 8 { return .lost }
             return hops <= 1 ? .near : .far
+        }
+        /// Tendencia según el rastro: +1 acercándose, -1 alejándose, 0 estable.
+        var trend: Int {
+            guard trail.count >= 3 else { return 0 }
+            let recent = Array(trail.suffix(5))
+            let first = recent.first!, last = recent.last!
+            if last - first > 0.08 { return 1 }
+            if first - last > 0.08 { return -1 }
+            return 0
         }
     }
 
@@ -104,15 +116,22 @@ final class RelaySession: NSObject, ObservableObject {
                                altitudeMeters: Double? = nil, batteryPercent: Int? = nil) {
         guard name != localName else { return }
         if let a = altitudeMeters, referenceAltitude == nil { referenceAltitude = a }
+        // Proximidad 0..1 a partir de los saltos: 0 saltos = 1.0 (pegado),
+        // y baja al aumentar saltos. Es la muestra que alimenta el rastro.
+        let proximity = max(0.0, 1.0 - Double(hops) / 6.0)
         DispatchQueue.main.async {
             if let i = self.riders.firstIndex(where: { $0.name == name }) {
                 self.riders[i].hops = hops
                 self.riders[i].lastSeen = Date()
                 if let a = altitudeMeters { self.riders[i].altitudeMeters = a }
                 if let b = batteryPercent { self.riders[i].batteryPercent = b }
+                self.riders[i].trail.append(proximity)
+                if self.riders[i].trail.count > 40 { self.riders[i].trail.removeFirst() }
             } else {
-                self.riders.append(RiderNode(name: name, hops: hops, lastSeen: Date(),
-                                             altitudeMeters: altitudeMeters, batteryPercent: batteryPercent))
+                var node = RiderNode(name: name, hops: hops, lastSeen: Date(),
+                                     altitudeMeters: altitudeMeters, batteryPercent: batteryPercent)
+                node.trail = [proximity]
+                self.riders.append(node)
             }
         }
     }

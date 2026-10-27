@@ -83,12 +83,18 @@ struct RelayView: View {
                     HStack(spacing: 10) {
                         Circle().fill(color(r.level)).frame(width: 12, height: 12)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(r.name).font(.body.weight(.medium))
+                            HStack(spacing: 6) {
+                                Text(r.name).font(.body.weight(.medium))
+                                trendBadge(r.trend)
+                            }
                             if let d = detail(r) {
                                 Text(d).font(.caption2).foregroundStyle(.orange)
                             }
                         }
                         Spacer()
+                        // Rastro (mini-gráfica de proximidad en el tiempo).
+                        TrailSparkline(trail: r.trail, color: color(r.level))
+                            .frame(width: 70, height: 24)
                         Text(label(r.level, hops: r.hops))
                             .font(.caption).foregroundStyle(.secondary)
                     }
@@ -98,6 +104,21 @@ struct RelayView: View {
         .padding(14)
         .background(Color.gray.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// Insignia de tendencia del rastro: acercándose / alejándose / estable.
+    @ViewBuilder
+    private func trendBadge(_ trend: Int) -> some View {
+        switch trend {
+        case 1:
+            Label("se acerca", systemImage: "arrow.up.right")
+                .font(.system(size: 9, weight: .bold)).foregroundStyle(.green)
+        case -1:
+            Label("se aleja", systemImage: "arrow.down.right")
+                .font(.system(size: 9, weight: .bold)).foregroundStyle(.red)
+        default:
+            EmptyView()
+        }
     }
 
     /// Detalle de altura/pisos + batería de un nodo (Modo Rescate).

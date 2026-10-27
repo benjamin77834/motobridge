@@ -20,6 +20,7 @@
 		5B6E1981AF6CDC100004C22B /* PeerBridgeSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 168F2607A0C6C75F9A54514A /* PeerBridgeSession.swift */; };
 		6465A038E45ADED840FB9BB1 /* RescueSensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF9580AA4ADF0354C618C0C /* RescueSensors.swift */; };
 		663A38D6D9F86591AD0619D2 /* RelayApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5830CE4282DEA1D89F851A0E /* RelayApp.swift */; };
+		6876A29CC800732D3C61530B /* TrailSparkline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75E19ACCE648FF970E174DC5 /* TrailSparkline.swift */; };
 		6EA3F4C9BE04F70D8039C707 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00398E2CF63EB430C40CA29 /* DashboardView.swift */; };
 		72F5D40344BE88A28FBC6356 /* MotoBridgeIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF01898A30F24B8F72F05CF7 /* MotoBridgeIntents.swift */; };
 		7A2337F6902A973C7659606D /* RemoteControlManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59ADA87FF916BF8D514DE639 /* RemoteControlManager.swift */; };
@@ -83,6 +84,7 @@
 		6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceChannel.swift; sourceTree = "<group>"; };
 		6C42EBC7A7DBE2293B9D5EBE /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		707A2E8A53190514E043717E /* AudioBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBridge.swift; sourceTree = "<group>"; };
+		75E19ACCE648FF970E174DC5 /* TrailSparkline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrailSparkline.swift; sourceTree = "<group>"; };
 		77EDDAC5C8DBFCF68787123D /* NetworkBridgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeView.swift; sourceTree = "<group>"; };
 		80CF211F3BDA6713A45C7216 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeController.swift; sourceTree = "<group>"; };
@@ -117,6 +119,7 @@
 				FC10E228F756A59AB17CCE5A /* RadarView.swift */,
 				5830CE4282DEA1D89F851A0E /* RelayApp.swift */,
 				0830C76A43C6EA7F180FE856 /* RelaySession.swift */,
+				75E19ACCE648FF970E174DC5 /* TrailSparkline.swift */,
 			);
 			path = MonoBridgeRelay;
 			sourceTree = "<group>";
@@ -498,6 +501,7 @@
 				97EF3F195FB248C10A7B31E7 /* RadarView.swift in Sources */,
 				663A38D6D9F86591AD0619D2 /* RelayApp.swift in Sources */,
 				2F621B630907BABCDB0B2374 /* RelaySession.swift in Sources */,
+				6876A29CC800732D3C61530B /* TrailSparkline.swift in Sources */,
 				9FE43B4358E991592EA8B9AE /* VoiceChannel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
