@@ -58,6 +58,25 @@ targets:
   #       TARGETED_DEVICE_FAMILY: "4"
   #       ENABLE_PREVIEWS: YES
 
+  # Nodo de malla para macOS: repetidor + radar (sin audio ni sensores).
+  # Reutiliza MeshRelay y VoiceChannel del core de iOS (Foundation puro).
+  MonoBridgeRelay:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: MonoBridgeRelay
+      - path: MotoBridge/Core/Network/MeshRelay.swift
+      - path: MotoBridge/Core/Network/VoiceChannel.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.motobridge.relay.monkeyfon
+        PRODUCT_NAME: "Mono Bridge Relay"
+        INFOPLIST_FILE: MonoBridgeRelay/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: MonoBridgeRelay/MonoBridgeRelay.entitlements
+        ENABLE_PREVIEWS: YES
+
   MotoBridgeTests:
     type: bundle.unit-test
     platform: iOS
@@ -79,3 +98,7 @@ schemes:
     test:
       targets:
         - MotoBridgeTests
+  MonoBridgeRelay:
+    build:
+      targets:
+        MonoBridgeRelay: all
