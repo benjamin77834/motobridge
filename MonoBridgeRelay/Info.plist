@@ -26,6 +26,8 @@
 	<string>public.app-category.utilities</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Mono Bridge Relay usa la red local para unirse a la malla de los dispositivos cercanos y extender su alcance.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mono Bridge Relay usa el micrófono para que este equipo pueda hablar con los dispositivos conectados a la malla.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_mbapple._tcp</string>

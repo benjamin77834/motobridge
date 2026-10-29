@@ -68,6 +68,7 @@ targets:
       - path: MonoBridgeRelay
       - path: MotoBridge/Core/Network/MeshRelay.swift
       - path: MotoBridge/Core/Network/VoiceChannel.swift
+      - path: MotoBridge/Core/Audio/AudioCodec.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.motobridge.relay.monkeyfon

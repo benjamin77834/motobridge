@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		002724A472D68AD28F8A2195 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14569E9F3FF76A9725C03102 /* WatchBridge.swift */; };
 		0434F6C4655E71B023C3DFEA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3D87CB699F2B1EF3A72E7B0C /* Assets.xcassets */; };
+		05E47515E99D85A42D3912F3 /* RelayAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8007F93A7156DE233E818E56 /* RelayAudio.swift */; };
 		17CCAA91008E77F3494A1CA1 /* MeshRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */; };
 		28903BF099EABBC9505D341E /* AppIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = D73608A31D00D54C0275CF7A /* AppIcon.svg */; };
 		2A171020DEB4ECE9077F65F7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C42EBC7A7DBE2293B9D5EBE /* AppState.swift */; };
@@ -17,6 +18,7 @@
 		2F8AB49CA8FC2F34725AD4B1 /* OpusCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC21EBD18C639E527A56D797 /* OpusCodec.swift */; };
 		402DEBD572A183B00DABA53A /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55BF19FCFE50A747E7C04C5B /* AudioSessionManager.swift */; };
 		4139839F9CA39BFF4CE9B3A5 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E0A81559B8E2835AE5F780 /* SettingsView.swift */; };
+		457B287847424C27A805D7E4 /* AudioCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2826E967233D3C971337E9F8 /* AudioCodec.swift */; };
 		551D13D3C201F1815B6D078F /* LocalNetworkTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F58EC3B8B3DA3607714FBB1 /* LocalNetworkTransport.swift */; };
 		5B6E1981AF6CDC100004C22B /* PeerBridgeSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 168F2607A0C6C75F9A54514A /* PeerBridgeSession.swift */; };
 		6465A038E45ADED840FB9BB1 /* RescueSensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF9580AA4ADF0354C618C0C /* RescueSensors.swift */; };
@@ -88,6 +90,7 @@
 		707A2E8A53190514E043717E /* AudioBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBridge.swift; sourceTree = "<group>"; };
 		75E19ACCE648FF970E174DC5 /* TrailSparkline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrailSparkline.swift; sourceTree = "<group>"; };
 		77EDDAC5C8DBFCF68787123D /* NetworkBridgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeView.swift; sourceTree = "<group>"; };
+		8007F93A7156DE233E818E56 /* RelayAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayAudio.swift; sourceTree = "<group>"; };
 		80CF211F3BDA6713A45C7216 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeController.swift; sourceTree = "<group>"; };
 		9C62488C8C39EC93531E9631 /* AudioIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioIO.swift; sourceTree = "<group>"; };
@@ -121,6 +124,7 @@
 				6902FEEC7673C8AFCEF20CBC /* MonoBridgeRelay.entitlements */,
 				FC10E228F756A59AB17CCE5A /* RadarView.swift */,
 				5830CE4282DEA1D89F851A0E /* RelayApp.swift */,
+				8007F93A7156DE233E818E56 /* RelayAudio.swift */,
 				0830C76A43C6EA7F180FE856 /* RelaySession.swift */,
 				75E19ACCE648FF970E174DC5 /* TrailSparkline.swift */,
 			);
@@ -509,9 +513,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				457B287847424C27A805D7E4 /* AudioCodec.swift in Sources */,
 				17CCAA91008E77F3494A1CA1 /* MeshRelay.swift in Sources */,
 				97EF3F195FB248C10A7B31E7 /* RadarView.swift in Sources */,
 				663A38D6D9F86591AD0619D2 /* RelayApp.swift in Sources */,
+				05E47515E99D85A42D3912F3 /* RelayAudio.swift in Sources */,
 				2F621B630907BABCDB0B2374 /* RelaySession.swift in Sources */,
 				6876A29CC800732D3C61530B /* TrailSparkline.swift in Sources */,
 				9FE43B4358E991592EA8B9AE /* VoiceChannel.swift in Sources */,

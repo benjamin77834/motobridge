@@ -70,6 +70,13 @@ final class RelaySession: NSObject, ObservableObject {
     private let browser: MCNearbyServiceBrowser
     private let mesh = MeshRelay()
 
+    // Audio: la Mac como participante de voz (puesto base).
+    private let audio = RelayAudio()
+    /// ¿El micrófono de la Mac está transmitiendo? (botón "Hablar").
+    @Published private(set) var talking = false
+    /// ¿El audio de la Mac está disponible (permiso concedido + engine OK)?
+    @Published private(set) var audioReady = false
+
     override init() {
         let saved = UserDefaults.standard.string(forKey: "relayName")
         let host = Host.current().localizedName ?? "Mac Relay"
@@ -83,6 +90,15 @@ final class RelaySession: NSObject, ObservableObject {
         session.delegate = self
         advertiser.delegate = self
         browser.delegate = self
+        // El micrófono capturado se envía a los peers como audio de grupo, con
+        // el MISMO formato que iOS (VoiceChannel group + PCM), y se relaya.
+        audio.onCapturedAudio = { [weak self] packet in
+            guard let self else { return }
+            let channeled = VoiceChannel.wrap(packet, type: .group, targetId: 0)
+            let out = self.mesh.wrapOutgoing(channeled)
+            let peers = self.session.connectedPeers
+            if !peers.isEmpty { try? self.session.send(out, toPeers: peers, with: .unreliable) }
+        }
     }
 
     // MARK: - Control
@@ -93,6 +109,18 @@ final class RelaySession: NSObject, ObservableObject {
         advertiser.startAdvertisingPeer()
         browser.startBrowsingForPeers()
         addEvent("Relay iniciado como \"\(localName)\"")
+        // Arrancar audio (pide permiso de micrófono la primera vez).
+        RelayAudio.requestMicPermission { [weak self] granted in
+            guard let self else { return }
+            if granted {
+                do { try self.audio.start(); self.audioReady = true
+                     self.addEvent("Audio listo (puedes hablar)") }
+                catch { self.addEvent("No se pudo iniciar audio: \(error.localizedDescription)") }
+            } else {
+                self.audioReady = false
+                self.addEvent("Sin permiso de micrófono: solo monitoreo")
+            }
+        }
     }
 
     func stop() {
@@ -101,14 +129,26 @@ final class RelaySession: NSObject, ObservableObject {
         advertiser.stopAdvertisingPeer()
         browser.stopBrowsingForPeers()
         session.disconnect()
+        audio.isTransmitting = false
+        audio.stop()
         DispatchQueue.main.async {
             self.connectedPeers = []
             self.riders = []
+            self.talking = false
+            self.audioReady = false
         }
         addEvent("Relay detenido")
     }
 
     func toggle() { running ? stop() : start() }
+
+    /// Activa/desactiva el micrófono de la Mac (botón "Hablar").
+    func toggleTalk() {
+        guard audioReady else { return }
+        talking.toggle()
+        audio.isTransmitting = talking
+        addEvent(talking ? "🎙️ Micrófono ABIERTO" : "Micrófono en silencio")
+    }
 
     // MARK: - Radar
 
@@ -202,11 +242,19 @@ extension RelaySession: MCSessionDelegate {
         }
     }
 
-    /// Interpreta el payload de la malla para alimentar el radar. Solo nos
-    /// interesa el latido de PRESENCIA (nombre del rider); el audio se ignora
-    /// (este nodo no reproduce), pero ya fue reenviado arriba.
+    /// Interpreta el payload de la malla: alimenta el radar con la PRESENCIA y
+    /// REPRODUCE el audio de grupo entrante (la Mac ahora es puesto de voz).
     private func handlePayload(_ data: Data, hops: Int) {
-        guard let msg = VoiceChannel.unwrap(data) else { return }
+        guard let msg = VoiceChannel.unwrap(data) else {
+            // Sin cabecera de canal: tratar como audio de grupo crudo.
+            audio.play(data)
+            return
+        }
+        // Audio de grupo → reproducir por las bocinas de la Mac.
+        if msg.type == .group {
+            audio.play(msg.audio)
+            return
+        }
         if msg.type == .presence {
             // Primera línea = nombre; líneas ALT=/BAT= = datos del Modo Rescate.
             guard let text = String(data: msg.audio, encoding: .utf8) else { return }

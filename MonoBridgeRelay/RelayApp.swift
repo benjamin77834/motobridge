@@ -36,6 +36,25 @@ struct RelayView: View {
             .buttonStyle(.borderedProminent)
             .tint(relay.running ? .red : .green)
 
+            // Botón HABLAR: la Mac como puesto de voz. Solo si el audio está listo.
+            if relay.running {
+                Button {
+                    relay.toggleTalk()
+                } label: {
+                    Label(relay.talking ? "HABLANDO — toca para silenciar" : "HABLAR (micrófono)",
+                          systemImage: relay.talking ? "mic.fill" : "mic")
+                        .font(.title3.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(relay.talking ? .orange : .gray)
+                .disabled(!relay.audioReady)
+                if !relay.audioReady {
+                    Text("Esperando permiso de micrófono… (Ajustes del sistema → Privacidad → Micrófono)")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+
             radarVisual
             radarCard
             statsRow
