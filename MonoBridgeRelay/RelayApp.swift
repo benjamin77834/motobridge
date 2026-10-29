@@ -23,6 +23,8 @@ struct RelayView: View {
     @EnvironmentObject private var relay: RelaySession
     /// Modo de voz: push-to-talk (mantener) o manos libres (toggle).
     @State private var pushToTalk = true
+    /// Texto del mensaje a enviar al grupo.
+    @State private var messageText = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -38,11 +40,27 @@ struct RelayView: View {
             .buttonStyle(.borderedProminent)
             .tint(relay.running ? .red : .green)
 
-            // Puesto de voz de la Mac. Solo si el audio está listo.
+            // Mensajes y alarma: paquetes cortos, confiables (no audio continuo).
             if relay.running {
-                talkControls
-                if !relay.audioReady {
-                    Text("Esperando permiso de micrófono… (Ajustes del sistema → Privacidad → Micrófono)")
+                messageControls
+
+                // Audio en vivo: APAGADO por defecto (desestabiliza la conexión).
+                // Solo enciéndelo si de verdad quieres hablar/oír en vivo.
+                Button {
+                    relay.toggleAudio()
+                } label: {
+                    Label(relay.audioReady ? "APAGAR AUDIO EN VIVO" : "ACTIVAR AUDIO EN VIVO",
+                          systemImage: relay.audioReady ? "speaker.wave.2.fill" : "speaker.slash")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+                .tint(relay.audioReady ? .orange : .secondary)
+
+                if relay.audioReady {
+                    talkControls
+                } else {
+                    Text("Audio en vivo apagado. La alarma y los mensajes sí funcionan (más estables). Enciende el audio solo si quieres voz en vivo (puede desconectar).")
                         .font(.caption2).foregroundStyle(.secondary)
                 }
             }
@@ -52,7 +70,7 @@ struct RelayView: View {
             statsRow
             eventsCard
             Spacer()
-            Text("Nodo de voz y malla: habla y oye con el grupo y extiende el alcance. El audio no se graba. No reemplaza a servicios de emergencia.")
+            Text("Nodo de malla: radar, alarma y mensajes son estables. El audio en vivo es EXPERIMENTAL y puede desconectarse (límite de la conexión directa Mac↔iPhone). El audio no se graba. No reemplaza a servicios de emergencia.")
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .padding(20)
@@ -70,6 +88,41 @@ struct RelayView: View {
             }
             return .ignored
         }
+    }
+
+    // Alarma + mensajes: confiables (paquetes cortos, no audio continuo).
+    private var messageControls: some View {
+        VStack(spacing: 8) {
+            // Botón de ALARMA de emergencia.
+            Button {
+                relay.sendAlarm()
+            } label: {
+                Label("ALARMA DE EMERGENCIA", systemImage: "exclamationmark.triangle.fill")
+                    .font(.title3.weight(.heavy))
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.red)
+
+            // Mensaje de texto al grupo (el iPhone lo lee por voz).
+            HStack(spacing: 8) {
+                TextField("Mensaje al grupo…", text: $messageText)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { enviarMensaje() }
+                Button("Enviar") { enviarMensaje() }
+                    .disabled(messageText.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            Text("La alarma y los mensajes son avisos cortos: el teléfono los lee por voz. Más confiables que el audio en vivo.")
+                .font(.caption2).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func enviarMensaje() {
+        let t = messageText.trimmingCharacters(in: .whitespaces)
+        guard !t.isEmpty else { return }
+        relay.sendMessage(t)
+        messageText = ""
     }
 
     // Control de voz: selector PTT/manos libres + botón de hablar.

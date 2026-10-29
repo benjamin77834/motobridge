@@ -1,5 +1,8 @@
 import Foundation
 import AVFoundation
+import os
+
+private let alog = os.Logger(subsystem: "com.motobridge.relay", category: "audio")
 
 /// Motor de audio para la app de macOS: captura el micrófono y reproduce el
 /// audio entrante, con el MISMO formato de red que iOS (PCM Int16 16 kHz mono).
@@ -31,8 +34,14 @@ final class RelayAudio {
     private let maxPendingPlaybackBuffers = 6
 
     private let codec: AudioCodec = PCMCodec()
+    /// Realce de voz (filtro paso-banda + noise gate), igual que iOS. Limpia el
+    /// "gis"/estática del micrófono de la Mac antes de enviar.
+    private let voiceEnhancer = VoiceEnhancer()
 
     init() {
+        // Gate un poco más alto que iOS: la Mac con bocinas+mic abiertos capta
+        // más ruido de fondo; corta mejor el "gis" entre palabras.
+        voiceEnhancer.gateThreshold = 0.02
         self.networkFormat = AVAudioFormat(
             commonFormat: .pcmFormatInt16,
             sampleRate: Self.networkSampleRate,
@@ -44,14 +53,9 @@ final class RelayAudio {
     func start() throws {
         guard !isRunning else { return }
 
-        // Cancelación de eco del sistema (evita acople bocinas↔micrófono).
-        do {
-            try engine.inputNode.setVoiceProcessingEnabled(true)
-            try engine.outputNode.setVoiceProcessingEnabled(true)
-        } catch {
-            // Si no se puede, seguimos: habrá más riesgo de eco (turnarse para hablar).
-        }
-
+        // NOTA: en macOS, setVoiceProcessingEnabled suele fallar (error -10875)
+        // y deja el engine en estado inconsistente. Lo omitimos: el eco se maneja
+        // con push-to-talk (micrófono abierto solo al hablar) o audífonos.
         engine.attach(playerNode)
         let playbackFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
@@ -62,8 +66,11 @@ final class RelayAudio {
         engine.connect(playerNode, to: engine.mainMixerNode, format: playbackFormat)
         playbackConverter = AVAudioConverter(from: networkFormat, to: playbackFormat)
 
-        // Tap del micrófono. format nil = formato real del dispositivo; se
-        // convierte a 16 kHz en el handler.
+        // Tap del micrófono con format: nil. El formato real del inputNode no
+        // está listo inmediatamente tras activar voiceProcessing (sale sr=0), así
+        // que pasar un formato explícito ahí rompe el engine. Con nil, el engine
+        // usa el formato real vigente y el conversor se crea con el formato de
+        // cada buffer entrante (igual que iOS).
         let input = engine.inputNode
         input.installTap(onBus: 0, bufferSize: 1024, format: nil) { [weak self] buffer, _ in
             self?.handleCaptured(buffer)
@@ -73,6 +80,7 @@ final class RelayAudio {
         try engine.start()
         playerNode.play()
         isRunning = true
+        alog.info("engine iniciado OK")
     }
 
     func stop() {
@@ -87,7 +95,12 @@ final class RelayAudio {
 
     // MARK: - Captura
 
+    private var capCount = 0
     private func handleCaptured(_ buffer: AVAudioPCMBuffer) {
+        capCount += 1
+        if capCount % 50 == 1 {
+            alog.info("tap buffer #\(self.capCount) transmit=\(self.isTransmitting) frames=\(buffer.frameLength)")
+        }
         guard isTransmitting else { return }
         if captureConverter == nil || captureConverter?.inputFormat != buffer.format {
             captureConverter = AVAudioConverter(from: buffer.format, to: networkFormat)
@@ -101,21 +114,41 @@ final class RelayAudio {
             if consumed { s.pointee = .noDataNow; return nil }
             consumed = true; s.pointee = .haveData; return buffer
         }
-        guard status != .error, out.frameLength > 0, let data = Self.data(from: out) else { return }
+        guard status != .error, out.frameLength > 0 else {
+            alog.error("conversion captura fallo o vacia")
+            return
+        }
+        // Realce de voz in-place sobre el buffer 16 kHz mono: filtro paso-banda
+        // de voz (300–3400 Hz) + noise gate. Esto quita el "gis"/estática del
+        // micrófono de la Mac antes de enviar (igual que hace el iPhone).
+        if let ch = out.int16ChannelData {
+            voiceEnhancer.process(ch[0], count: Int(out.frameLength), sampleRate: Self.networkSampleRate)
+        }
+        guard let data = Self.data(from: out) else { return }
         var packet = Data([codec.codecId])
         packet.append(codec.encode(data))
+        if capCount % 50 == 2 { alog.info("enviando audio \(packet.count) bytes") }
         onCapturedAudio?(packet)
     }
 
     // MARK: - Reproducción
 
+    private var playCount = 0
     /// Reproduce un paquete de audio entrante (1 byte codec + PCM). Solo PCM:
     /// si llega Opus (codec 1) se ignora (la Mac no incluye el decodificador Opus).
     func play(_ packet: Data) {
-        guard isRunning, packet.count > 1 else { return }
-        if pendingPlaybackBuffers >= maxPendingPlaybackBuffers { return }
+        guard isRunning else { alog.error("play: engine no corriendo"); return }
+        guard packet.count > 1 else { return }
+        playCount += 1
         let codecByte = packet[packet.startIndex]
-        guard codecByte == AudioCodecId.pcm.rawValue else { return }
+        if playCount % 50 == 1 {
+            alog.info("play #\(self.playCount) bytes=\(packet.count) codec=\(codecByte) pending=\(self.pendingPlaybackBuffers)")
+        }
+        if pendingPlaybackBuffers >= maxPendingPlaybackBuffers { return }
+        guard codecByte == AudioCodecId.pcm.rawValue else {
+            if playCount % 50 == 1 { alog.error("play: codec no PCM (\(codecByte)), ignorado") }
+            return
+        }
         let payload = packet.subdata(in: (packet.startIndex + 1)..<packet.endIndex)
         guard let inBuffer = Self.buffer(from: payload, format: networkFormat),
               let converter = playbackConverter else { return }

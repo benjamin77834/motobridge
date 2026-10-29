@@ -1,6 +1,9 @@
 import Foundation
 import MultipeerConnectivity
 import Combine
+import os
+
+private let slog = os.Logger(subsystem: "com.motobridge.relay", category: "session")
 
 /// Nodo de malla para macOS: "Mono Bridge Relay".
 ///
@@ -69,6 +72,10 @@ final class RelaySession: NSObject, ObservableObject {
     private let advertiser: MCNearbyServiceAdvertiser
     private let browser: MCNearbyServiceBrowser
     private let mesh = MeshRelay()
+    /// Peers a los que ya invitamos (para no invitar doble y evitar el cruce
+    /// que provoca ForceDisconnect). Se limpia al conectar o perder el peer.
+    private var invitedPeers = Set<MCPeerID>()
+    private var payloadLogCount = 0
 
     // Audio: la Mac como participante de voz (puesto base).
     private let audio = RelayAudio()
@@ -80,8 +87,10 @@ final class RelaySession: NSObject, ObservableObject {
     override init() {
         let saved = UserDefaults.standard.string(forKey: "relayName")
         let host = Host.current().localizedName ?? "Mac Relay"
-        let name = (saved?.isEmpty == false ? saved! : "📡 \(host)")
-        self.localName = String(name.prefix(60))
+        // Sin emoji: caracteres no-ASCII en el displayName descolocan la regla
+        // de desempate de invitacion (nombre "menor") y causan cruce de sesiones.
+        let base = (saved?.isEmpty == false ? saved! : "Mac \(host)")
+        self.localName = String(base.prefix(60))
         self.myPeerID = MCPeerID(displayName: localName.isEmpty ? "Mac Relay" : localName)
         self.session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .optional)
         self.advertiser = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: nil, serviceType: Self.serviceType)
@@ -109,18 +118,12 @@ final class RelaySession: NSObject, ObservableObject {
         advertiser.startAdvertisingPeer()
         browser.startBrowsingForPeers()
         addEvent("Relay iniciado como \"\(localName)\"")
-        // Arrancar audio (pide permiso de micrófono la primera vez).
-        RelayAudio.requestMicPermission { [weak self] granted in
-            guard let self else { return }
-            if granted {
-                do { try self.audio.start(); self.audioReady = true
-                     self.addEvent("Audio listo (puedes hablar)") }
-                catch { self.addEvent("No se pudo iniciar audio: \(error.localizedDescription)") }
-            } else {
-                self.audioReady = false
-                self.addEvent("Sin permiso de micrófono: solo monitoreo")
-            }
-        }
+        // IMPORTANTE: el audio (engine de micrófono) NO arranca aquí. Correr el
+        // engine de captura de forma continua interfiere con Multipeer y provoca
+        // desconexiones. El micrófono se enciende SOLO al pulsar HABLAR (ver
+        // toggleTalk/setTalking). Así el nodo queda estable para alarma y
+        // mensajes (lo confiable), y el audio entra bajo demanda.
+        audioReady = false
     }
 
     func stop() {
@@ -142,20 +145,77 @@ final class RelaySession: NSObject, ObservableObject {
 
     func toggle() { running ? stop() : start() }
 
-    /// Activa/desactiva el micrófono de la Mac (botón "Hablar" toggle).
-    func toggleTalk() {
-        guard audioReady else { return }
-        setTalking(!talking)
+    /// Envía un MENSAJE de texto al grupo. El iPhone lo lee por voz (TTS). Es un
+    /// paquete corto y puntual, mucho más confiable que el audio continuo.
+    func sendMessage(_ text: String) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty, let payload = clean.data(using: .utf8) else { return }
+        let channeled = VoiceChannel.wrap(payload, type: .text, targetId: 0)
+        let peers = session.connectedPeers
+        guard !peers.isEmpty else { addEvent("Sin peers para el mensaje"); return }
+        try? session.send(channeled, toPeers: peers, with: .reliable)
+        addEvent("✉️ Mensaje enviado: \(clean)")
     }
 
-    /// Abre/cierra el micrófono directamente. Lo usa el PUSH-TO-TALK: abrir al
-    /// presionar, cerrar al soltar. PTT evita el eco porque el micrófono solo
-    /// está abierto mientras de verdad hablas (no de forma continua).
+    /// Botón de ALARMA: el iPhone la recibe con PRIORIDAD y la anuncia por voz
+    /// ("Emergencia. Un rider necesita ayuda"), aunque esté en música/privado.
+    /// Payload VACÍO: el iPhone, al recibir .alarm, solo reproduce audio si lo
+    /// hay; sin payload no mete ruido, pero sí dispara el aviso de voz. Además
+    /// mandamos un texto explícito para que quede claro de quién viene.
+    func sendAlarm() {
+        let peers = session.connectedPeers
+        guard !peers.isEmpty else { addEvent("Sin peers para la alarma"); return }
+        // 1) Alarma (prioridad + aviso de voz genérico en el iPhone).
+        let alarm = VoiceChannel.wrap(Data(), type: .alarm, targetId: 0)
+        try? session.send(alarm, toPeers: peers, with: .reliable)
+        // 2) Texto con el detalle (el iPhone lo lee por voz): quién y qué.
+        if let payload = "Emergencia. Alerta desde \(localName)".data(using: .utf8) {
+            let txt = VoiceChannel.wrap(payload, type: .text, targetId: 0)
+            try? session.send(txt, toPeers: peers, with: .reliable)
+        }
+        addEvent("🚨 ALARMA enviada al grupo")
+    }
+
+    /// Activa/desactiva el micrófono de la Mac (botón "Hablar" toggle).
+    /// Enciende/apaga el AUDIO (engine de voz: oír + poder hablar). Arranca
+    /// APAGADO. Mientras está apagado, el nodo solo hace alarma/mensajes/radar,
+    /// que es LO ESTABLE. El audio en vivo (que desestabiliza Multipeer) solo
+    /// corre cuando tú lo enciendes aquí. Pide permiso de micrófono la 1ª vez.
+    func toggleAudio() {
+        if audioReady { stopAudio() } else { startAudio() }
+    }
+
+    private func startAudio() {
+        RelayAudio.requestMicPermission { [weak self] granted in
+            guard let self else { return }
+            guard granted else { self.addEvent("Sin permiso de micrófono (Ajustes → Privacidad)"); return }
+            do {
+                try self.audio.start()
+                self.audioReady = true
+                self.addEvent("🔊 Audio ENCENDIDO (oyes y puedes hablar)")
+            } catch {
+                self.addEvent("No se pudo iniciar audio: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func stopAudio() {
+        audio.isTransmitting = false
+        audio.stop()
+        talking = false
+        audioReady = false
+        addEvent("🔇 Audio apagado (solo alarma y mensajes)")
+    }
+
+    func toggleTalk() { setTalking(!talking) }
+
+    /// Abre/cierra el micrófono para TRANSMITIR (el audio ya debe estar
+    /// encendido). Lo usa el push-to-talk.
     func setTalking(_ on: Bool) {
         guard audioReady, talking != on else { return }
         talking = on
         audio.isTransmitting = on
-        addEvent(on ? "🎙️ Micrófono ABIERTO" : "Micrófono en silencio")
+        addEvent(on ? "🎙️ Hablando…" : "Micrófono en silencio")
     }
 
     // MARK: - Radar
@@ -214,50 +274,57 @@ extension RelaySession: MCSessionDelegate {
         }
         switch state {
         case .connected:
+            invitedPeers.remove(peerID)   // conexión lograda, ya no "pendiente"
             addEvent("✅ Conectado con \(peerID.displayName)")
             noteRiderSeen(peerID.displayName, hops: 0)
         case .connecting:
             addEvent("Conectando con \(peerID.displayName)…")
         case .notConnected:
+            invitedPeers.remove(peerID)
             addEvent("❌ Desconectado \(peerID.displayName)")
+            // No reinvitamos: la Mac solo acepta. El iPhone (que sí busca e
+            // invita) volverá a invitar solo cuando nos vea.
         @unknown default: break
         }
     }
 
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
-        // Procesar por la malla: deduplicar, reproducir (aquí = anotar presencia)
-        // y REENVIAR a los demás vecinos para extender el alcance.
+        // El paquete puede venir de dos formas:
+        //  a) DIRECTO (mesh off, lo normal): empieza con el magic de VoiceChannel
+        //     (0x56). Se procesa tal cual, SIN tocar la capa de malla.
+        //  b) ENVUELTO en malla (mesh on): 9 bytes de cabecera + VoiceChannel.
+        // Detectamos por el primer byte: si es 0x56, es directo; si no, es malla.
+        let isDirect = (data.first == VoiceChannel.magic)
+        if isDirect {
+            handlePayload(data, hops: 0)
+            return
+        }
+        // Envuelto en malla: desenvolver, reproducir y (si procede) relayar.
         if let incoming = mesh.processIncoming(data) {
-            if incoming.isNew {
-                handlePayload(incoming.payload, hops: incoming.hops)
-            }
-            // Relay: reenviar a los OTROS peers conectados (no al emisor).
-            if let relay = incoming.relay {
-                let others = session.connectedPeers.filter { $0 != peerID }
-                if !others.isEmpty {
-                    try? session.send(relay, toPeers: others, with: .unreliable)
-                    DispatchQueue.main.async { self.relayedPackets += 1 }
-                }
-            }
-        } else {
-            // Paquete sin cabecera de malla: igual lo reenviamos a los demás.
+            // Si el paquete llega de un peer CONECTADO DIRECTO a la Mac, son 0
+            // saltos (está pegado), aunque el TTL de malla diga otra cosa. Solo
+            // usamos los hops de malla si el emisor NO es un peer directo.
+            let directHops = session.connectedPeers.contains(peerID) ? 0 : incoming.hops
+            if incoming.isNew { handlePayload(incoming.payload, hops: directHops) }
             let others = session.connectedPeers.filter { $0 != peerID }
-            if !others.isEmpty {
-                try? session.send(data, toPeers: others, with: .unreliable)
+            if let relay = incoming.relay, others.count >= 1, session.connectedPeers.count >= 2 {
+                try? session.send(relay, toPeers: others, with: .unreliable)
                 DispatchQueue.main.async { self.relayedPackets += 1 }
             }
-            handlePayload(data, hops: 0)
         }
     }
 
     /// Interpreta el payload de la malla: alimenta el radar con la PRESENCIA y
     /// REPRODUCE el audio de grupo entrante (la Mac ahora es puesto de voz).
     private func handlePayload(_ data: Data, hops: Int) {
+        payloadLogCount += 1
         guard let msg = VoiceChannel.unwrap(data) else {
             // Sin cabecera de canal: tratar como audio de grupo crudo.
+            if payloadLogCount % 50 == 1 { slog.info("payload SIN cabecera VoiceChannel (\(data.count)b) -> play crudo") }
             audio.play(data)
             return
         }
+        if payloadLogCount % 50 == 1 { slog.info("payload tipo=\(msg.type.rawValue) audio=\(msg.audio.count)b") }
         // Audio de grupo → reproducir por las bocinas de la Mac.
         if msg.type == .group {
             audio.play(msg.audio)
@@ -290,6 +357,14 @@ extension RelaySession: MCNearbyServiceAdvertiserDelegate {
                     didReceiveInvitationFromPeer peerID: MCPeerID,
                     withContext context: Data?,
                     invitationHandler: @escaping (Bool, MCSession?) -> Void) {
+        // Si YA estamos conectados a este peer, IGNORAR la invitación: aceptarla
+        // crearía una segunda sesión que mata la activa (el ForceDisconnect en
+        // bucle que veíamos, por las reinvitaciones periódicas del iPhone).
+        if session.connectedPeers.contains(peerID) {
+            addEvent("Ya conectado a \(peerID.displayName), ignoro reinvitación")
+            invitationHandler(false, nil)
+            return
+        }
         let accept = session.connectedPeers.count < Self.maxPeers
         addEvent(accept ? "Invitación de \(peerID.displayName), aceptando" : "Lleno, rechazo \(peerID.displayName)")
         invitationHandler(accept, accept ? session : nil)
@@ -302,19 +377,30 @@ extension RelaySession: MCNearbyServiceAdvertiserDelegate {
 
 extension RelaySession: MCNearbyServiceBrowserDelegate {
     func browser(_ browser: MCNearbyServiceBrowser, foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String: String]?) {
+        // CRÍTICO: ignorar nuestro propio anuncio. Multipeer a veces se descubre
+        // a sí mismo (advertiser + browser juntos); conectarse consigo mismo
+        // rompe las sesiones (ForceDisconnect en bucle). Filtrar por displayName.
+        guard peerID.displayName != myPeerID.displayName else {
+            return
+        }
         addEvent("Encontrado \(peerID.displayName)")
         guard !session.connectedPeers.contains(peerID) else { return }
+        guard !invitedPeers.contains(peerID) else { return }
         guard session.connectedPeers.count < Self.maxPeers else { return }
-        // Desempate determinista: invita el displayName menor; empate por hash.
+        // Desempate: invita el displayName "menor"; el otro acepta. Evita que
+        // ambos inviten a la vez (cruce). Solo ASCII en los nombres (sin emoji).
         let me = myPeerID.displayName, other = peerID.displayName
-        let iInvite = me != other ? (me < other) : (me.hashValue < peerID.hashValue)
-        if iInvite {
-            browser.invitePeer(peerID, to: session, withContext: nil, timeout: 10)
+        if me < other {
+            invitedPeers.insert(peerID)
+            browser.invitePeer(peerID, to: session, withContext: nil, timeout: 15)
             addEvent("Invitando a \(peerID.displayName)")
+        } else {
+            addEvent("Esperando invitación de \(peerID.displayName)")
         }
     }
 
     func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
+        invitedPeers.remove(peerID)
         addEvent("Perdido \(peerID.displayName)")
     }
 
