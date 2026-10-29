@@ -142,12 +142,20 @@ final class RelaySession: NSObject, ObservableObject {
 
     func toggle() { running ? stop() : start() }
 
-    /// Activa/desactiva el micrófono de la Mac (botón "Hablar").
+    /// Activa/desactiva el micrófono de la Mac (botón "Hablar" toggle).
     func toggleTalk() {
         guard audioReady else { return }
-        talking.toggle()
-        audio.isTransmitting = talking
-        addEvent(talking ? "🎙️ Micrófono ABIERTO" : "Micrófono en silencio")
+        setTalking(!talking)
+    }
+
+    /// Abre/cierra el micrófono directamente. Lo usa el PUSH-TO-TALK: abrir al
+    /// presionar, cerrar al soltar. PTT evita el eco porque el micrófono solo
+    /// está abierto mientras de verdad hablas (no de forma continua).
+    func setTalking(_ on: Bool) {
+        guard audioReady, talking != on else { return }
+        talking = on
+        audio.isTransmitting = on
+        addEvent(on ? "🎙️ Micrófono ABIERTO" : "Micrófono en silencio")
     }
 
     // MARK: - Radar

@@ -21,6 +21,8 @@ struct RelayApp: App {
 
 struct RelayView: View {
     @EnvironmentObject private var relay: RelaySession
+    /// Modo de voz: push-to-talk (mantener) o manos libres (toggle).
+    @State private var pushToTalk = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -36,19 +38,9 @@ struct RelayView: View {
             .buttonStyle(.borderedProminent)
             .tint(relay.running ? .red : .green)
 
-            // Botón HABLAR: la Mac como puesto de voz. Solo si el audio está listo.
+            // Puesto de voz de la Mac. Solo si el audio está listo.
             if relay.running {
-                Button {
-                    relay.toggleTalk()
-                } label: {
-                    Label(relay.talking ? "HABLANDO — toca para silenciar" : "HABLAR (micrófono)",
-                          systemImage: relay.talking ? "mic.fill" : "mic")
-                        .font(.title3.weight(.bold))
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(relay.talking ? .orange : .gray)
-                .disabled(!relay.audioReady)
+                talkControls
                 if !relay.audioReady {
                     Text("Esperando permiso de micrófono… (Ajustes del sistema → Privacidad → Micrófono)")
                         .font(.caption2).foregroundStyle(.secondary)
@@ -60,10 +52,74 @@ struct RelayView: View {
             statsRow
             eventsCard
             Spacer()
-            Text("Nodo de respaldo para la red malla. No graba ni reproduce audio; solo extiende el alcance y monitorea. No reemplaza a servicios de emergencia.")
+            Text("Nodo de voz y malla: habla y oye con el grupo y extiende el alcance. El audio no se graba. No reemplaza a servicios de emergencia.")
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .padding(20)
+        // Barra espaciadora = push-to-talk mientras se mantiene (solo en modo PTT).
+        .focusable()
+        .onKeyPress(phases: .down) { press in
+            if pushToTalk, relay.running, press.key == .space, !relay.talking {
+                relay.setTalking(true); return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(phases: .up) { press in
+            if pushToTalk, press.key == .space, relay.talking {
+                relay.setTalking(false); return .handled
+            }
+            return .ignored
+        }
+    }
+
+    // Control de voz: selector PTT/manos libres + botón de hablar.
+    private var talkControls: some View {
+        VStack(spacing: 8) {
+            Picker("", selection: $pushToTalk) {
+                Text("Mantener para hablar").tag(true)
+                Text("Manos libres").tag(false)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .onChange(of: pushToTalk) { _, _ in
+                // Al cambiar de modo, cerrar el micrófono por seguridad.
+                relay.setTalking(false)
+            }
+
+            if pushToTalk {
+                // Push-to-talk: abre el mic SOLO mientras mantienes presionado.
+                // Es lo que evita el eco (mic abierto solo al hablar).
+                Text(relay.talking ? "🎙️ HABLANDO…" : "MANTÉN PARA HABLAR")
+                    .font(.title3.weight(.bold))
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .background(relay.talking ? Color.orange : Color.gray.opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { _ in if !relay.talking { relay.setTalking(true) } }
+                            .onEnded { _ in relay.setTalking(false) }
+                    )
+                    .disabled(!relay.audioReady)
+                Text("Mantén presionado (o la barra espaciadora) mientras hablas. Recomendado: evita el eco.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            } else {
+                // Manos libres: toggle (mic continuo). Puede meter eco sin audífonos.
+                Button {
+                    relay.toggleTalk()
+                } label: {
+                    Label(relay.talking ? "HABLANDO — toca para silenciar" : "HABLAR (manos libres)",
+                          systemImage: relay.talking ? "mic.fill" : "mic")
+                        .font(.title3.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(relay.talking ? .orange : .gray)
+                .disabled(!relay.audioReady)
+                Text("Micrófono siempre abierto. Usa audífonos en la Mac para evitar eco.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+        }
     }
 
     private var header: some View {

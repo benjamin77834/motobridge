@@ -63,7 +63,7 @@ targets:
   MonoBridgeRelay:
     type: application
     platform: macOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "14.0"
     sources:
       - path: MonoBridgeRelay
       - path: MotoBridge/Core/Network/MeshRelay.swift
