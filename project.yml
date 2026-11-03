@@ -12,7 +12,7 @@ settings:
     DEVELOPMENT_TEAM: "48V68SFH7Q"   # Apple Developer Program (cuenta de pago)
     CODE_SIGN_STYLE: Automatic
     TARGETED_DEVICE_FAMILY: "1,2" # iPhone + iPad (para probar el bridge por red)
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "0.1.1"
     CURRENT_PROJECT_VERSION: "13"
 
 packages:
