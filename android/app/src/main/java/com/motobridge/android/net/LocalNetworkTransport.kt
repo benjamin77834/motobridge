@@ -156,11 +156,15 @@ class LocalNetworkTransport(
             }
 
             override fun onServiceLost(info: NsdServiceInfo) {
-                // NSD reporta pérdidas falsas con frecuencia. NO desconectar si
-                // el peer sigue recibiendo audio reciente (la verdad es el UDP).
+                // NSD reporta pérdidas falsas MUY seguido, sobre todo en
+                // movimiento (el WiFi/hotspot fluctúa aunque sea la misma moto).
+                // NO soltamos el peer por un bache: la verdad es el UDP. Una vez
+                // que conocemos su IP:puerto podemos seguir enviándole audio
+                // aunque NSD lo pierda; solo lo quitamos si lleva MUCHO sin audio
+                // (30 s), para tolerar cortes de red en movimiento.
                 val p = peers[info.serviceName] ?: return
-                if (System.currentTimeMillis() - p.lastRx < 5000) {
-                    emit("NSD perdió ${info.serviceName} pero sigue el audio; se mantiene")
+                if (System.currentTimeMillis() - p.lastRx < 30000) {
+                    emit("NSD perdió ${info.serviceName} pero mantenemos la ruta (bache de red)")
                     return
                 }
                 if (peers.remove(info.serviceName) != null) {
