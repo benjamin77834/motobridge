@@ -35,6 +35,32 @@ final class PeerBridgeSession: NSObject, ObservableObject {
     @Published private(set) var discoveredPeers: [MCPeerID] = []
     @Published private(set) var connectedPeers: [MCPeerID] = []
 
+    /// Modo de conexión entre iPhones:
+    ///  - true  (automático): al encontrar un iPhone, se conecta solo (default).
+    ///  - false (manual): solo descubre; el usuario elige a cuál conectarse
+    ///    tocándolo en la lista (como un escáner/emparejado).
+    var autoConnect: Bool = (UserDefaults.standard.object(forKey: "peerAutoConnect") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(autoConnect, forKey: "peerAutoConnect") }
+    }
+
+    /// Invitación manual: la vista llama a esto cuando el usuario toca un peer
+    /// descubierto para conectarse a él (modo manual).
+    func connectManually(to peerID: MCPeerID) {
+        guard !session.connectedPeers.contains(peerID) else { return }
+        guard session.connectedPeers.count < Self.maxPeers else {
+            addEvent("Grupo lleno")
+            return
+        }
+        invite(peerID)
+    }
+
+    /// Conecta manualmente a un peer descubierto por su nombre (para la UI).
+    func connectManually(toName name: String) {
+        if let p = discoveredPeers.first(where: { $0.displayName == name }) {
+            connectManually(to: p)
+        }
+    }
+
     /// Diagnóstico visible en pantalla para depurar el descubrimiento.
     @Published private(set) var isAdvertising = false
     @Published private(set) var isBrowsing = false
@@ -137,7 +163,7 @@ final class PeerBridgeSession: NSObject, ObservableObject {
     /// reintenta invitarlo tras un breve retardo. El descubrimiento nunca se
     /// detiene mientras el bridge está activo, así que reaparecerá solo.
     private func scheduleReconnect(to peerID: MCPeerID) {
-        guard isRunning else { return }
+        guard isRunning, autoConnect else { return }   // en manual no reconecta solo
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             guard let self, self.isRunning else { return }
             // Solo el que tiene displayName "menor" reinvita, para no cruzar.
@@ -269,6 +295,14 @@ extension PeerBridgeSession: MCNearbyServiceBrowserDelegate {
         }
         log.info(.bridge, "Multipeer: peer encontrado \(peerID.displayName)")
         addEvent("Encontrado \(peerID.displayName)")
+
+        // Modo MANUAL: no conectar solo. Solo quedó en discoveredPeers para que
+        // el usuario lo elija en la lista (connectManually). El otro lado, al
+        // recibir la invitación, la acepta igual (didReceiveInvitation).
+        guard autoConnect else {
+            addEvent("Manual: toca \(peerID.displayName) para conectar")
+            return
+        }
 
         // Auto-invitación determinista para evitar doble invitación cruzada:
         // solo invita el que tenga el displayName "menor". El otro aceptará.

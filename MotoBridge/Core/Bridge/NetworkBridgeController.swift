@@ -55,6 +55,17 @@ final class NetworkBridgeController: ObservableObject {
     @Published private(set) var applePeerCount = 0
     @Published private(set) var universalPeerCount = 0
 
+    /// Modo de conexión entre iPhones (canal Apple/Multipeer):
+    /// true = automático (se conecta solo), false = manual (eliges a quién).
+    @Published var peerAutoConnect: Bool = (UserDefaults.standard.object(forKey: "peerAutoConnect") as? Bool) ?? true {
+        didSet { peer.autoConnect = peerAutoConnect }
+    }
+
+    /// Conecta manualmente a un iPhone descubierto (modo manual), por nombre.
+    func connectToPeer(named name: String) {
+        peer.connectManually(toName: name)
+    }
+
     /// Nombre del rider (cómo te ven los demás). Se guarda y se aplica antes de
     /// conectar. Cambiarlo solo tiene efecto con el bridge detenido.
     @Published var riderName: String = UserDefaults.standard.string(forKey: "riderName") ?? ""
@@ -515,6 +526,7 @@ final class NetworkBridgeController: ObservableObject {
         // Armar los transportes según el modo guardado (por defecto Auto =
         // Apple + Universal a la vez). Debe ir tras wireTransport inicial.
         applyModeTransports()
+        peer.autoConnect = peerAutoConnect   // aplicar modo manual/auto guardado
     }
 
     /// Maneja un cambio de ruta de audio del sistema (p. ej. conectar AirPods).

@@ -773,6 +773,46 @@ struct NetworkBridgeView: View {
 
             Divider()
 
+            // Conexión entre iPhones: automática o manual (tipo escáner).
+            Toggle(isOn: $controller.peerAutoConnect) {
+                Text("Conectar iPhones automáticamente")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .tint(.green)
+            Text(controller.peerAutoConnect
+                 ? "Los iPhones se conectan solos al encontrarse."
+                 : "Manual: elige abajo a qué iPhone conectarte (como escanear y emparejar).")
+                .font(.caption2).foregroundStyle(.secondary)
+
+            // Modo manual: lista de iPhones descubiertos para tocar y conectar.
+            if !controller.peerAutoConnect && controller.isRunning {
+                if controller.discoveredPeers.isEmpty {
+                    Text("Buscando iPhones cercanos…")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    ForEach(controller.discoveredPeers) { p in
+                        let connected = controller.connectedPeers.contains { $0.name == p.name }
+                        Button {
+                            controller.connectToPeer(named: p.name)
+                        } label: {
+                            HStack {
+                                Image(systemName: connected ? "checkmark.circle.fill" : "iphone.gen3")
+                                    .foregroundStyle(connected ? .green : .blue)
+                                Text(p.name)
+                                Spacer()
+                                Text(connected ? "Conectado" : "Conectar")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(connected ? .green : .blue)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(connected)
+                    }
+                }
+            }
+
+            Divider()
+
             Toggle(isOn: $controller.meshEnabled) {
                 Text("Malla / relay (3+ motos)")
                     .font(.subheadline.weight(.semibold))
