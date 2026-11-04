@@ -210,7 +210,25 @@ struct NetworkBridgeView: View {
                     Image(systemName: "dot.radiowaves.left.and.right").foregroundStyle(.blue)
                     Text("DISPOSITIVOS CERCANOS").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     Spacer()
-                    ProgressView().scaleEffect(0.7)   // siempre buscando
+                    if controller.isScanning { ProgressView().scaleEffect(0.7) }
+                }
+
+                // Botón Buscar: enciende/apaga el escaneo. Apagarlo ahorra pila
+                // (no busca ni se anuncia). Enciéndelo solo para emparejar.
+                Button {
+                    controller.toggleScan()
+                } label: {
+                    Label(controller.isScanning ? "Buscando… (toca para detener)" : "Buscar dispositivos",
+                          systemImage: controller.isScanning ? "stop.circle" : "magnifyingglass")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(controller.isScanning ? .orange : .blue)
+
+                if !controller.isScanning {
+                    Text("El escaneo está apagado para ahorrar batería. Enciéndelo para buscar y conectar iPhones cercanos.")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }
 
                 // Conectados (verde, con check).
@@ -249,8 +267,8 @@ struct NetworkBridgeView: View {
                     .buttonStyle(.plain)
                 }
 
-                if controller.connectedPeers.isEmpty && pendientes.isEmpty {
-                    Text("Buscando iPhones cercanos… Asegúrate de que el otro también tenga el bridge iniciado y el permiso de Red local activado.")
+                if controller.isScanning && controller.connectedPeers.isEmpty && pendientes.isEmpty {
+                    Text("Buscando… Asegúrate de que el otro iPhone también tenga el bridge iniciado, esté buscando y con el permiso de Red local activado.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }

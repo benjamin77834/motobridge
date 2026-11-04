@@ -121,18 +121,47 @@ final class PeerBridgeSession: NSObject, ObservableObject {
 
     // MARK: - Control
 
-    /// Empieza a anunciarse y a buscar peers.
+    /// ¿El escaneo (anunciarse + buscar) está activo? Consume batería/radio, así
+    /// que se puede apagar cuando ya estás conectado.
+    @Published private(set) var isScanning = false
+
+    /// Arranca la sesión. En modo AUTOMÁTICO empieza a escanear de una vez; en
+    /// MANUAL arranca SIN escanear (el usuario enciende el escaneo cuando quiere
+    /// emparejar, como Bluetooth), para no gastar batería de fondo.
     func start() {
         guard !isRunning else { return }
         isRunning = true
+        if autoConnect { startDiscovery() }
+        log.info(.bridge, "Multipeer listo como \"\(myPeerID.displayName)\" (escaneo=\(autoConnect))")
+    }
+
+    /// Enciende el escaneo (anunciarse + buscar peers). Lo llama el botón de
+    /// "Buscar dispositivos" en modo manual, o el arranque en automático.
+    func startDiscovery() {
+        guard isRunning, !isScanning else { return }
         advertiser.startAdvertisingPeer()
         browser.startBrowsingForPeers()
         DispatchQueue.main.async {
+            self.isScanning = true
             self.isAdvertising = true
             self.isBrowsing = true
             self.lastError = "—"
         }
-        log.info(.bridge, "Multipeer: anunciando y buscando como \"\(myPeerID.displayName)\"")
+        log.info(.bridge, "Multipeer: escaneo ON")
+    }
+
+    /// Apaga el escaneo (ahorra batería). La conexión ya establecida se mantiene;
+    /// solo deja de buscar/anunciar nuevos.
+    func stopDiscovery() {
+        guard isScanning else { return }
+        advertiser.stopAdvertisingPeer()
+        browser.stopBrowsingForPeers()
+        DispatchQueue.main.async {
+            self.isScanning = false
+            self.isAdvertising = false
+            self.isBrowsing = false
+        }
+        log.info(.bridge, "Multipeer: escaneo OFF (ahorro de batería)")
     }
 
     func stop() {
@@ -145,6 +174,7 @@ final class PeerBridgeSession: NSObject, ObservableObject {
             self.discoveredPeers.removeAll()
             self.connectedPeers.removeAll()
             self.state = .notConnected
+            self.isScanning = false
             self.isAdvertising = false
             self.isBrowsing = false
         }

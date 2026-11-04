@@ -66,6 +66,16 @@ final class NetworkBridgeController: ObservableObject {
         peer.connectManually(toName: name)
     }
 
+    /// ¿El escaneo de dispositivos está activo? (consume batería/radio). Espejo
+    /// del peer para que la UI reaccione.
+    @Published private(set) var isScanning = false
+
+    /// Enciende/apaga el escaneo de dispositivos cercanos (botón Buscar).
+    func toggleScan() {
+        if peer.isScanning { peer.stopDiscovery() } else { peer.startDiscovery() }
+        isScanning = peer.isScanning
+    }
+
     /// Nombre del rider (cómo te ven los demás). Se guarda y se aplica antes de
     /// conectar. Cambiarlo solo tiene efecto con el bridge detenido.
     @Published var riderName: String = UserDefaults.standard.string(forKey: "riderName") ?? ""
@@ -1163,6 +1173,7 @@ final class NetworkBridgeController: ObservableObject {
         // El descubrimiento de red arranca de inmediato (barato y seguro en main).
         transport.start()
         gatewayTransport?.start()   // modo puente: también el lado Android/WiFi
+        isScanning = peer.isScanning  // reflejar si el escaneo arrancó (auto) o no (manual)
         remoteControl.start()   // escuchar botones del intercom (Hysnox)
         startPresenceTimer()    // radar: latido de presencia
         if rescueMode { rescueSensors.start() }  // altímetro + brújula para rescate
