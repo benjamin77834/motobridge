@@ -16,6 +16,7 @@ struct NetworkBridgeView: View {
             VStack(spacing: 18) {
                 // PANTALLA PRINCIPAL SIMPLE (uso en moto):
                 statusCard          // estado + iniciar/detener
+                nearbyDevicesCard   // dispositivos cercanos: toca para conectar (tipo Bluetooth)
                 radarCard           // LED de cercanía de cada rider
                 outputCard          // switch Cascos <-> Bocinas (arriba, fácil alcance)
                 walkieCard          // modo walkie-talkie (altavoz del teléfono)
@@ -196,6 +197,67 @@ struct NetworkBridgeView: View {
         case .connected: return "checkmark.circle.fill"
         case .connecting: return "arrow.triangle.2.circlepath"
         case .notConnected: return "xmark.circle.fill"
+        }
+    }
+
+    // Dispositivos cercanos: pantalla tipo Bluetooth para VER y CONECTAR con un
+    // toque. Pensada para iPhone↔iPhone cuando el automático no conecta: ves al
+    // otro iPhone y le das clic para emparejar. Aparece con el bridge iniciado.
+    @ViewBuilder private var nearbyDevicesCard: some View {
+        if controller.isRunning && controller.mode != .universal {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Image(systemName: "dot.radiowaves.left.and.right").foregroundStyle(.blue)
+                    Text("DISPOSITIVOS CERCANOS").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    Spacer()
+                    ProgressView().scaleEffect(0.7)   // siempre buscando
+                }
+
+                // Conectados (verde, con check).
+                ForEach(controller.connectedPeers) { peer in
+                    HStack(spacing: 12) {
+                        Image(systemName: "iphone.gen3").foregroundStyle(.green)
+                        Text(peer.name).font(.body.weight(.semibold))
+                        Spacer()
+                        Label("Conectado", systemImage: "checkmark.circle.fill")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.green)
+                            .labelStyle(.titleAndIcon)
+                    }
+                    .padding(.vertical, 6)
+                }
+
+                // Descubiertos pero NO conectados: botón grande "Conectar".
+                let pendientes = controller.discoveredPeers.filter { d in
+                    !controller.connectedPeers.contains(where: { $0.id == d.id })
+                }
+                ForEach(pendientes) { peer in
+                    Button {
+                        controller.connectToPeer(named: peer.name)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "iphone.gen3").foregroundStyle(.blue)
+                            Text(peer.name).font(.body.weight(.semibold)).foregroundStyle(.primary)
+                            Spacer()
+                            Text("Conectar")
+                                .font(.subheadline.weight(.bold))
+                                .padding(.horizontal, 14).padding(.vertical, 6)
+                                .background(Color.blue).foregroundStyle(.white)
+                                .clipShape(Capsule())
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if controller.connectedPeers.isEmpty && pendientes.isEmpty {
+                    Text("Buscando iPhones cercanos… Asegúrate de que el otro también tenga el bridge iniciado y el permiso de Red local activado.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(Color.blue.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
 
