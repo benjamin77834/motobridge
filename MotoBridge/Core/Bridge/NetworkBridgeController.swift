@@ -533,6 +533,22 @@ final class NetworkBridgeController: ObservableObject {
             self?.handleRouteChange(note)
         }
 
+        // Mantener la app viva con la pantalla apagada: tras una interrupción
+        // (llamada, Siri, alarma) reactivar sesión y motor para no quedar dormidos.
+        NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil, queue: .main
+        ) { [weak self] note in
+            guard let self, self.isRunning else { return }
+            let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+            guard raw.flatMap({ AVAudioSession.InterruptionType(rawValue: $0) }) == .ended else { return }
+            self.audioQueue.async {
+                try? self.audioSession.setActive(true)
+                try? self.audioIO.restart()
+                self.log.info(.audioSession, "Interrupción terminada: audio reactivado")
+            }
+        }
+
         // Armar los transportes según el modo guardado (por defecto Auto =
         // Apple + Universal a la vez). Debe ir tras wireTransport inicial.
         applyModeTransports()
@@ -556,6 +572,11 @@ final class NetworkBridgeController: ObservableObject {
             }
             self.refreshInputs()
 
+            // Cambió el audífono (conectado o desconectado): volver a modo intercom.
+            if reason == .newDeviceAvailable || reason == .oldDeviceUnavailable {
+                DispatchQueue.main.async { self.scheduleIntercomMode() }
+            }
+
             // Si acaban de conectarse AirPods/Beats, seleccionarlos y asumir su
             // configuración automáticamente (nueva ruta disponible).
             if reason == .newDeviceAvailable,
@@ -564,6 +585,41 @@ final class NetworkBridgeController: ObservableObject {
                 let option = AudioInputOption(id: premium.uid, name: premium.portName, type: premium.portType.rawValue)
                 DispatchQueue.main.async { self.selectInput(option) }
             }
+        }
+    }
+
+    private var intercomWork: DispatchWorkItem?
+
+    /// Pone el modo intercom (cascos, mic abierto) con un debounce para no hacer
+    /// bucles cuando iOS dispara varios cambios de ruta seguidos. No aplica a
+    /// walkie ni a música automática, que gestionan su propio audio.
+    private func scheduleIntercomMode() {
+        guard isRunning, !walkieMode, !autoMusicMode else { return }
+        intercomWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.applyIntercomMode() }
+        intercomWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: work)
+    }
+
+    private func applyIntercomMode() {
+        guard isRunning, !walkieMode, !autoMusicMode else { return }
+        outputTarget = .headset
+        UserDefaults.standard.set(OutputTarget.headset.rawValue, forKey: "outputTarget")
+        log.info(.audioRoute, "Modo intercom aplicado (inicio/cambio de audífonos)")
+        if useCallKit {
+            // El sistema gestiona la sesión; solo asegurar el micrófono abierto.
+            if !isTransmitting { setTransmitting(true) }
+            return
+        }
+        audioQueue.async { [weak self] in
+            guard let self else { return }
+            let premium = (self.audioSession.availableInputs ?? [])
+                .contains { Self.isPremiumAppleHeadset($0.portName) }
+            self.configureAudioSession(forAirPods: premium)
+            if !premium { self.forcePreferredHFPInput() }
+            try? self.audioIO.start()
+            self.refreshInputs()
+            DispatchQueue.main.async { if !self.isTransmitting { self.setTransmitting(true) } }
         }
     }
 
@@ -1170,6 +1226,14 @@ final class NetworkBridgeController: ObservableObject {
             AVAudioApplication.requestRecordPermission { _ in }
         }
         isRunning = true
+        // Siempre arrancar en modo intercom (cascos), salvo walkie/música auto.
+        if !walkieMode && !autoMusicMode && outputTarget != .headset {
+            outputTarget = .headset
+            UserDefaults.standard.set(OutputTarget.headset.rawValue, forKey: "outputTarget")
+        }
+        // Mientras el bridge corre, no dejar que el iPhone/iPad se duerma por
+        // inactividad; con pantalla bloqueada sigue vivo por el modo de fondo audio.
+        UIApplication.shared.isIdleTimerDisabled = true
         // El descubrimiento de red arranca de inmediato (barato y seguro en main).
         transport.start()
         gatewayTransport?.start()   // modo puente: también el lado Android/WiFi
@@ -1430,6 +1494,8 @@ final class NetworkBridgeController: ObservableObject {
     func stop() {
         guard isRunning else { return }
         isRunning = false
+        intercomWork?.cancel()
+        UIApplication.shared.isIdleTimerDisabled = false
         remoteControl.stop()
         stopPresenceTimer()
         rescueSensors.stop()
