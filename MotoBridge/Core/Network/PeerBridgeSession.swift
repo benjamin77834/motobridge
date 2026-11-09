@@ -26,6 +26,27 @@ final class PeerBridgeSession: NSObject, ObservableObject {
     /// Multipeer no descubre a nadie. Por eso usamos "mbapple" (solo Apple).
     static let serviceType = "mbapple"
 
+    /// ID único y estable de ESTE dispositivo. Se manda al anunciarse y sirve para
+    /// el desempate de "quién invita". No se puede usar el nombre: en iOS moderno
+    /// casi todos los iPhones se llaman "iPhone", y con nombres iguales ambos
+    /// invitaban a la vez (se cancelan) o ninguno invitaba (tardaba en unirse).
+    static let deviceUID: String = {
+        if let saved = UserDefaults.standard.string(forKey: "peerDeviceUID") { return saved }
+        let new = UUID().uuidString
+        UserDefaults.standard.set(new, forKey: "peerDeviceUID")
+        return new
+    }()
+
+    /// ¿Debo invitar yo a este peer? Determinista y simétrico: invita el de UID
+    /// menor, el otro espera. Si el otro no manda UID (versión vieja), cae al nombre.
+    static func shouldInvite(myName: String, otherName: String, otherUID: String?) -> Bool {
+        if let otherUID, !otherUID.isEmpty { return deviceUID < otherUID }
+        return myName <= otherName
+    }
+
+    /// UID de cada peer descubierto (para reinvitar con el mismo criterio).
+    private var peerUIDs: [MCPeerID: String] = [:]
+
     /// Máximo de riders en el grupo (común con Android). El anfitrión cuenta,
     /// así que son hasta MAX_PEERS conexiones = MAX_PEERS+1 personas... limitamos
     /// a MAX_PEERS conexiones para mantener calidad en WiFi local.
@@ -108,7 +129,7 @@ final class PeerBridgeSession: NSObject, ObservableObject {
                                  securityIdentity: nil,
                                  encryptionPreference: .optional)
         self.advertiser = MCNearbyServiceAdvertiser(peer: myPeerID,
-                                                    discoveryInfo: nil,
+                                                    discoveryInfo: ["uid": Self.deviceUID],
                                                     serviceType: Self.serviceType)
         self.browser = MCNearbyServiceBrowser(peer: myPeerID,
                                               serviceType: Self.serviceType)
@@ -196,8 +217,10 @@ final class PeerBridgeSession: NSObject, ObservableObject {
         guard isRunning, autoConnect else { return }   // en manual no reconecta solo
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             guard let self, self.isRunning else { return }
-            // Solo el que tiene displayName "menor" reinvita, para no cruzar.
-            guard self.myPeerID.displayName < peerID.displayName else { return }
+            // Solo el de UID "menor" reinvita, para no cruzar.
+            guard Self.shouldInvite(myName: self.myPeerID.displayName,
+                                    otherName: peerID.displayName,
+                                    otherUID: self.peerUIDs[peerID]) else { return }
             guard !self.session.connectedPeers.contains(peerID) else { return }
             if self.discoveredPeers.contains(peerID) {
                 self.log.info(.bridge, "Multipeer: reintentando conexión con \(peerID.displayName)")
@@ -318,6 +341,7 @@ extension PeerBridgeSession: MCNearbyServiceBrowserDelegate {
     func browser(_ browser: MCNearbyServiceBrowser,
                  foundPeer peerID: MCPeerID,
                  withDiscoveryInfo info: [String: String]?) {
+        if let uid = info?["uid"] { peerUIDs[peerID] = uid }
         DispatchQueue.main.async {
             if !self.discoveredPeers.contains(peerID) {
                 self.discoveredPeers.append(peerID)
@@ -346,8 +370,9 @@ extension PeerBridgeSession: MCNearbyServiceBrowserDelegate {
         // Regla determinista: el displayName "menor" invita; el otro espera.
         // Si los nombres son IGUALES (dos equipos sin nombre, o nombre repetido),
         // desempatar por hash para que exactamente uno invite y no haya deadlock.
-        let me = myPeerID.displayName, other = peerID.displayName
-        let iInvite = me != other ? (me < other) : (me.hashValue < peerID.hashValue)
+        let iInvite = Self.shouldInvite(myName: myPeerID.displayName,
+                                        otherName: peerID.displayName,
+                                        otherUID: info?["uid"])
         if iInvite {
             invite(peerID)
         } else {
