@@ -77,6 +77,63 @@ final class RelaySession: NSObject, ObservableObject {
     private var invitedPeers = Set<MCPeerID>()
     private var payloadLogCount = 0
 
+    // MARK: Buscar dispositivos (igual que en iPhone)
+
+    /// ID único y estable de esta Mac. Se manda al anunciarse y sirve para el
+    /// desempate de "quién invita" (mismo criterio que la app iPhone).
+    static let deviceUID: String = {
+        if let saved = UserDefaults.standard.string(forKey: "relayDeviceUID") { return saved }
+        let new = UUID().uuidString
+        UserDefaults.standard.set(new, forKey: "relayDeviceUID")
+        return new
+    }()
+    private var peerUIDs: [MCPeerID: String] = [:]
+    private var foundPeers: [MCPeerID] = []
+
+    /// ¿Está escaneando (anunciándose + buscando)? Apagado ahorra batería.
+    @Published private(set) var scanning = false
+    /// Dispositivos descubiertos que aún no están conectados (para el botón Conectar).
+    @Published private(set) var nearby: [String] = []
+
+    /// Conexión automática (se une sola, como antes) o manual (tú eliges a cuál).
+    @Published var autoConnect: Bool = (UserDefaults.standard.object(forKey: "relayAutoConnect") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(autoConnect, forKey: "relayAutoConnect") }
+    }
+
+    func startScan() {
+        guard running, !scanning else { return }
+        advertiser.startAdvertisingPeer()
+        browser.startBrowsingForPeers()
+        scanning = true
+        addEvent("Escaneo ON")
+    }
+
+    func stopScan() {
+        guard scanning else { return }
+        advertiser.stopAdvertisingPeer()
+        browser.stopBrowsingForPeers()
+        scanning = false
+        addEvent("Escaneo OFF (ahorro de batería)")
+    }
+
+    func toggleScan() { scanning ? stopScan() : startScan() }
+
+    /// Conecta a un dispositivo de la lista (botón Conectar).
+    func connect(toName name: String) {
+        guard let peer = foundPeers.first(where: { $0.displayName == name }),
+              !session.connectedPeers.contains(peer), !invitedPeers.contains(peer) else { return }
+        invitedPeers.insert(peer)
+        browser.invitePeer(peer, to: session, withContext: nil, timeout: 15)
+        addEvent("Invitando a \(name)")
+    }
+
+    private func refreshNearby() {
+        let list = foundPeers
+            .filter { !session.connectedPeers.contains($0) }
+            .map { $0.displayName }
+        DispatchQueue.main.async { self.nearby = list }
+    }
+
     // Audio: la Mac como participante de voz (puesto base).
     private let audio = RelayAudio()
     /// ¿El micrófono de la Mac está transmitiendo? (botón "Hablar").
@@ -93,7 +150,7 @@ final class RelaySession: NSObject, ObservableObject {
         self.localName = String(base.prefix(60))
         self.myPeerID = MCPeerID(displayName: localName.isEmpty ? "Mac Relay" : localName)
         self.session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .optional)
-        self.advertiser = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: nil, serviceType: Self.serviceType)
+        self.advertiser = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: ["uid": Self.deviceUID], serviceType: Self.serviceType)
         self.browser = MCNearbyServiceBrowser(peer: myPeerID, serviceType: Self.serviceType)
         super.init()
         session.delegate = self
@@ -115,8 +172,9 @@ final class RelaySession: NSObject, ObservableObject {
     func start() {
         guard !running else { return }
         running = true
-        advertiser.startAdvertisingPeer()
-        browser.startBrowsingForPeers()
+        // Automático: escanea de una vez. Manual: queda sin escanear hasta que
+        // pulses "Buscar dispositivos" (ahorra batería, igual que en iPhone).
+        if autoConnect { startScan() }
         addEvent("Relay iniciado como \"\(localName)\"")
         // IMPORTANTE: el audio (engine de micrófono) NO arranca aquí. Correr el
         // engine de captura de forma continua interfiere con Multipeer y provoca
@@ -134,9 +192,13 @@ final class RelaySession: NSObject, ObservableObject {
         session.disconnect()
         audio.isTransmitting = false
         audio.stop()
+        foundPeers.removeAll()
+        invitedPeers.removeAll()
         DispatchQueue.main.async {
             self.connectedPeers = []
             self.riders = []
+            self.nearby = []
+            self.scanning = false
             self.talking = false
             self.audioReady = false
         }
@@ -147,14 +209,31 @@ final class RelaySession: NSObject, ObservableObject {
 
     /// Envía un MENSAJE de texto al grupo. El iPhone lo lee por voz (TTS). Es un
     /// paquete corto y puntual, mucho más confiable que el audio continuo.
-    func sendMessage(_ text: String) {
+    /// ID derivado del nombre (FNV-1a), IDÉNTICO al de la app iPhone
+    /// (NetworkBridgeController.idFor). Así el iPhone reconoce que un mensaje
+    /// privado es para él.
+    static func idFor(name: String) -> UInt32 {
+        var hash: UInt32 = 2166136261
+        for byte in name.utf8 { hash = (hash ^ UInt32(byte)) &* 16777619 }
+        return hash
+    }
+
+    /// Envía un MENSAJE de texto. `to` = nombre de la persona (privado) o nil
+    /// para todo el grupo. El iPhone lo lee por voz. Al privado solo lo lee
+    /// quien tenga ese nombre; se manda por la malla y solo al peer si está
+    /// conectado directo (si no, a todos y cada uno filtra por su id).
+    func sendMessage(_ text: String, to name: String? = nil) {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty, let payload = clean.data(using: .utf8) else { return }
-        let channeled = VoiceChannel.wrap(payload, type: .text, targetId: 0)
-        let peers = session.connectedPeers
-        guard !peers.isEmpty else { addEvent("Sin peers para el mensaje"); return }
+        let target = name.map { Self.idFor(name: $0) } ?? 0
+        let channeled = VoiceChannel.wrap(payload, type: .text, targetId: target)
+        let all = session.connectedPeers
+        guard !all.isEmpty else { addEvent("Sin peers para el mensaje"); return }
+        // Privado a alguien conectado directo: solo a ese peer (más discreto).
+        var peers = all
+        if let name, let direct = all.first(where: { $0.displayName == name }) { peers = [direct] }
         try? session.send(channeled, toPeers: peers, with: .reliable)
-        addEvent("✉️ Mensaje enviado: \(clean)")
+        addEvent(name == nil ? "✉️ Mensaje al grupo: \(clean)" : "✉️ Mensaje a \(name!): \(clean)")
     }
 
     /// Botón de ALARMA: el iPhone la recibe con PRIORIDAD y la anuncia por voz
@@ -272,6 +351,7 @@ extension RelaySession: MCSessionDelegate {
         DispatchQueue.main.async {
             self.connectedPeers = session.connectedPeers.map { $0.displayName }
         }
+        refreshNearby()   // los conectados salen de "cercanos"; los caídos vuelven
         switch state {
         case .connected:
             invitedPeers.remove(peerID)   // conexión lograda, ya no "pendiente"
@@ -384,13 +464,24 @@ extension RelaySession: MCNearbyServiceBrowserDelegate {
             return
         }
         addEvent("Encontrado \(peerID.displayName)")
+        if let uid = info?["uid"] { peerUIDs[peerID] = uid }
+        if !foundPeers.contains(peerID) { foundPeers.append(peerID) }
+        refreshNearby()
+
+        // Manual: solo queda en la lista; tú eliges con el botón Conectar.
+        guard autoConnect else { return }
         guard !session.connectedPeers.contains(peerID) else { return }
         guard !invitedPeers.contains(peerID) else { return }
         guard session.connectedPeers.count < Self.maxPeers else { return }
-        // Desempate: invita el displayName "menor"; el otro acepta. Evita que
-        // ambos inviten a la vez (cruce). Solo ASCII en los nombres (sin emoji).
-        let me = myPeerID.displayName, other = peerID.displayName
-        if me < other {
+        // Desempate por UID (mismo criterio que el iPhone): invita el UID menor,
+        // el otro espera. Sin UID del otro (versión vieja) cae al nombre.
+        let iInvite: Bool
+        if let otherUID = info?["uid"], !otherUID.isEmpty {
+            iInvite = Self.deviceUID < otherUID
+        } else {
+            iInvite = myPeerID.displayName <= peerID.displayName
+        }
+        if iInvite {
             invitedPeers.insert(peerID)
             browser.invitePeer(peerID, to: session, withContext: nil, timeout: 15)
             addEvent("Invitando a \(peerID.displayName)")
@@ -401,6 +492,8 @@ extension RelaySession: MCNearbyServiceBrowserDelegate {
 
     func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         invitedPeers.remove(peerID)
+        foundPeers.removeAll { $0 == peerID }
+        refreshNearby()
         addEvent("Perdido \(peerID.displayName)")
     }
 

@@ -23,8 +23,10 @@ struct RelayView: View {
     @EnvironmentObject private var relay: RelaySession
     /// Modo de voz: push-to-talk (mantener) o manos libres (toggle).
     @State private var pushToTalk = true
-    /// Texto del mensaje a enviar al grupo.
+    /// Texto del mensaje a enviar.
     @State private var messageText = ""
+    /// Destinatario del mensaje: "" = todo el grupo, o el nombre de una persona.
+    @State private var recipient = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -42,6 +44,7 @@ struct RelayView: View {
 
             // Mensajes y alarma: paquetes cortos, confiables (no audio continuo).
             if relay.running {
+                devicesControls
                 messageControls
 
                 // Audio en vivo: APAGADO por defecto (desestabiliza la conexión).
@@ -90,6 +93,46 @@ struct RelayView: View {
         }
     }
 
+    // Buscar dispositivos: escaneo on/off + lista con botón Conectar.
+    private var devicesControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle("Conectar automáticamente", isOn: $relay.autoConnect)
+                .font(.subheadline.weight(.semibold))
+            Text(relay.autoConnect
+                 ? "Se une solo a los dispositivos que encuentra."
+                 : "Manual: pulsa Buscar y elige a cuál conectarte (ahorra batería).")
+                .font(.caption2).foregroundStyle(.secondary)
+
+            Button {
+                relay.toggleScan()
+            } label: {
+                Label(relay.scanning ? "Buscando… (detener)" : "Buscar dispositivos",
+                      systemImage: relay.scanning ? "stop.circle" : "magnifyingglass")
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(relay.scanning ? .orange : .blue)
+
+            ForEach(relay.nearby, id: \.self) { name in
+                HStack {
+                    Image(systemName: "iphone.gen3").foregroundStyle(.blue)
+                    Text(name)
+                    Spacer()
+                    Button("Conectar") { relay.connect(toName: name) }
+                        .buttonStyle(.borderedProminent)
+                }
+            }
+            if relay.scanning && relay.nearby.isEmpty && relay.connectedPeers.isEmpty {
+                Text("Buscando… el otro dispositivo debe tener el bridge iniciado y Red local activada.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        .padding(12)
+        .background(Color.blue.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
     // Alarma + mensajes: confiables (paquetes cortos, no audio continuo).
     private var messageControls: some View {
         VStack(spacing: 8) {
@@ -104,9 +147,19 @@ struct RelayView: View {
             .buttonStyle(.borderedProminent)
             .tint(.red)
 
-            // Mensaje de texto al grupo (el iPhone lo lee por voz).
+            // Destinatario: todo el grupo o una persona conectada.
+            Picker("Para", selection: $recipient) {
+                Text("Todo el grupo").tag("")
+                ForEach(relay.connectedPeers, id: \.self) { name in
+                    Text(name).tag(name)
+                }
+            }
+            .pickerStyle(.menu)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Mensaje de texto (el iPhone lo lee por voz).
             HStack(spacing: 8) {
-                TextField("Mensaje al grupo…", text: $messageText)
+                TextField(recipient.isEmpty ? "Mensaje al grupo…" : "Mensaje a \(recipient)…", text: $messageText)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { enviarMensaje() }
                 Button("Enviar") { enviarMensaje() }
@@ -121,7 +174,7 @@ struct RelayView: View {
     private func enviarMensaje() {
         let t = messageText.trimmingCharacters(in: .whitespaces)
         guard !t.isEmpty else { return }
-        relay.sendMessage(t)
+        relay.sendMessage(t, to: recipient.isEmpty ? nil : recipient)
         messageText = ""
     }
 
