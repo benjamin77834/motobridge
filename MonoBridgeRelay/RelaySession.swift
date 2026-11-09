@@ -76,6 +76,8 @@ final class RelaySession: NSObject, ObservableObject {
     /// que provoca ForceDisconnect). Se limpia al conectar o perder el peer.
     private var invitedPeers = Set<MCPeerID>()
     private var payloadLogCount = 0
+    /// Actividad que mantiene el sistema despierto mientras el nodo está activo.
+    private var activity: NSObjectProtocol?
 
     // MARK: Buscar dispositivos (igual que en iPhone)
 
@@ -172,6 +174,12 @@ final class RelaySession: NSObject, ObservableObject {
     func start() {
         guard !running else { return }
         running = true
+        // Evitar que macOS duerma el equipo o suspenda la app (App Nap) mientras el
+        // nodo está encendido: con la pantalla apagada se cortaba la conexión. La
+        // pantalla SÍ puede apagarse; lo que se mantiene despierto es el sistema.
+        activity = ProcessInfo.processInfo.beginActivity(
+            options: [.userInitiated, .idleSystemSleepDisabled],
+            reason: "Mono Bridge Relay: nodo de malla activo")
         // Automático: escanea de una vez. Manual: queda sin escanear hasta que
         // pulses "Buscar dispositivos" (ahorra batería, igual que en iPhone).
         if autoConnect { startScan() }
@@ -187,6 +195,7 @@ final class RelaySession: NSObject, ObservableObject {
     func stop() {
         guard running else { return }
         running = false
+        if let a = activity { ProcessInfo.processInfo.endActivity(a); activity = nil }
         advertiser.stopAdvertisingPeer()
         browser.stopBrowsingForPeers()
         session.disconnect()

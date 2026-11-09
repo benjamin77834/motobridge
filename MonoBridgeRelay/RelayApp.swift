@@ -27,6 +27,9 @@ struct RelayView: View {
     @State private var messageText = ""
     /// Destinatario del mensaje: "" = todo el grupo, o el nombre de una persona.
     @State private var recipient = ""
+    /// ¿Está el cursor en el campo de mensaje? Si sí, la barra espaciadora debe
+    /// escribir un espacio y NO activar el push-to-talk.
+    @FocusState private var messageFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -80,12 +83,15 @@ struct RelayView: View {
         // Barra espaciadora = push-to-talk mientras se mantiene (solo en modo PTT).
         .focusable()
         .onKeyPress(phases: .down) { press in
+            // Escribiendo en el campo de mensaje: dejar pasar la tecla (espacio normal).
+            if messageFocused { return .ignored }
             if pushToTalk, relay.running, press.key == .space, !relay.talking {
                 relay.setTalking(true); return .handled
             }
             return .ignored
         }
         .onKeyPress(phases: .up) { press in
+            if messageFocused { return .ignored }
             if pushToTalk, press.key == .space, relay.talking {
                 relay.setTalking(false); return .handled
             }
@@ -161,6 +167,7 @@ struct RelayView: View {
             HStack(spacing: 8) {
                 TextField(recipient.isEmpty ? "Mensaje al grupo…" : "Mensaje a \(recipient)…", text: $messageText)
                     .textFieldStyle(.roundedBorder)
+                    .focused($messageFocused)
                     .onSubmit { enviarMensaje() }
                 Button("Enviar") { enviarMensaje() }
                     .disabled(messageText.trimmingCharacters(in: .whitespaces).isEmpty)
