@@ -225,8 +225,11 @@ final class NetworkBridgeController: ObservableObject {
     /// teléfono.
     private func configureSessionForWalkie() {
         do {
+            // allowBluetooth quedó deprecado en iOS 18 (ahora allowBluetoothHFP).
+            let btHFP: AVAudioSession.CategoryOptions
+            if #available(iOS 18.0, *) { btHFP = .allowBluetoothHFP } else { btHFP = AVAudioSession.CategoryOptions(rawValue: 0x4) }
             try audioSession.setCategory(.playAndRecord, mode: .voiceChat,
-                                         options: [.defaultToSpeaker, .allowBluetooth])
+                                         options: [.defaultToSpeaker, btHFP])
             try audioSession.setActive(true)
             try audioSession.overrideOutputAudioPort(.speaker)
             log.info(.audioRoute, "Walkie: sesión altavoz+mic activa")
