@@ -15,7 +15,7 @@ struct RelayApp: App {
                 .frame(minWidth: 420, minHeight: 520)
                 .preferredColorScheme(.dark)
         }
-        .windowResizability(.contentSize)
+        .defaultSize(width: 480, height: 760)
     }
 }
 
@@ -32,6 +32,9 @@ struct RelayView: View {
     @FocusState private var messageFocused: Bool
 
     var body: some View {
+        // ScrollView: el contenido es largo (radar, dispositivos, mensajes, log)
+        // y la ventana puede ser más baja que él; así se puede desplazar.
+        ScrollView(.vertical) {
         VStack(alignment: .leading, spacing: 16) {
             header
 
@@ -80,6 +83,7 @@ struct RelayView: View {
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .padding(20)
+        }
         // Barra espaciadora = push-to-talk mientras se mantiene (solo en modo PTT).
         .focusable()
         .onKeyPress(phases: .down) { press in
