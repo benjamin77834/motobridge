@@ -14,8 +14,10 @@ private let slog = os.Logger(subsystem: "com.motobridge.relay", category: "sessi
 ///    el alcance encadenado (útil en emergencias: nodo fijo que no se apaga).
 ///  - Muestra su propio radar de riders/nodos conectados (centro de monitoreo).
 ///
-/// NO captura ni reproduce audio y NO usa sensores. Es deliberadamente un nodo
-/// de red: repetir + ver, no hablar.
+/// Además corre en paralelo el canal "Universal" (UDP + Bonjour `_motobridge._udp`,
+/// ver PROTOCOL.md) para ver y hablar con dispositivos Android, y RELAYA entre
+/// ambos canales (presencia, alarma y mensajes) uniendo iPhones y Android. En
+/// Universal v1 NO hay audio en vivo (solo presencia, alarma y mensajes).
 final class RelaySession: NSObject, ObservableObject {
 
     /// Debe ser EXACTAMENTE el mismo serviceType que la app iOS (canal Apple).
@@ -27,6 +29,13 @@ final class RelaySession: NSObject, ObservableObject {
     @Published private(set) var riders: [RiderNode] = []
     @Published private(set) var relayedPackets = 0
     @Published private(set) var events: [String] = []
+    /// Dispositivos del canal Universal (Android u otros) conectados por red local.
+    @Published private(set) var universalPeers: [String] = []
+
+    /// Todos los dispositivos con los que se puede hablar (Multipeer + Universal).
+    var allPeers: [String] {
+        connectedPeers + universalPeers.filter { !connectedPeers.contains($0) }
+    }
 
     /// Un nodo visto en la malla (rider o repetidor), con su última señal.
     /// altitudeMeters/batteryPercent llegan solo cuando el rider tiene activo el
@@ -76,6 +85,19 @@ final class RelaySession: NSObject, ObservableObject {
     /// que provoca ForceDisconnect). Se limpia al conectar o perder el peer.
     private var invitedPeers = Set<MCPeerID>()
     private var payloadLogCount = 0
+
+    // MARK: Canal Universal (Android)
+    private let universal: UniversalTransport
+    private var presenceTimer: Timer?
+    /// Estado compartido entre hilos (Multipeer y Universal), protegido por lock.
+    private let stateLock = NSLock()
+    private var universalKeys: [String] = []
+    /// Nombre real de cada conexión Universal (se aprende del latido de presencia).
+    private var universalAliases: [String: String] = [:]
+    /// Paquetes de control sin ID de malla ya vistos (huella → cuándo). Evita
+    /// bucles al repetir entre canales, igual que MeshRelay lo hace con IDs.
+    private var directSeen: [Int: Date] = [:]
+    private static let dedupWindow: TimeInterval = 1.0
     /// Actividad que mantiene el sistema despierto mientras el nodo está activo.
     private var activity: NSObjectProtocol?
 
@@ -106,6 +128,8 @@ final class RelaySession: NSObject, ObservableObject {
         guard running, !scanning else { return }
         advertiser.startAdvertisingPeer()
         browser.startBrowsingForPeers()
+        universal.start()
+        startPresenceTimer()
         scanning = true
         addEvent("Escaneo ON")
     }
@@ -114,6 +138,8 @@ final class RelaySession: NSObject, ObservableObject {
         guard scanning else { return }
         advertiser.stopAdvertisingPeer()
         browser.stopBrowsingForPeers()
+        universal.stop()
+        presenceTimer?.invalidate(); presenceTimer = nil
         scanning = false
         addEvent("Escaneo OFF (ahorro de batería)")
     }
@@ -154,7 +180,18 @@ final class RelaySession: NSObject, ObservableObject {
         self.session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .optional)
         self.advertiser = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: ["uid": Self.deviceUID], serviceType: Self.serviceType)
         self.browser = MCNearbyServiceBrowser(peer: myPeerID, serviceType: Self.serviceType)
+        self.universal = UniversalTransport(localName: self.localName.isEmpty ? "Mac Relay" : self.localName)
         super.init()
+        universal.onPacket = { [weak self] data, key in self?.handleUniversal(data, key: key) }
+        universal.onPeersChange = { [weak self] keys in
+            guard let self else { return }
+            self.stateLock.lock()
+            self.universalKeys = keys
+            self.universalAliases = self.universalAliases.filter { keys.contains($0.key) }
+            self.stateLock.unlock()
+            self.publishUniversalPeers()
+        }
+        universal.onEvent = { [weak self] line in self?.addEvent("[Universal] " + line) }
         session.delegate = self
         advertiser.delegate = self
         browser.delegate = self
@@ -198,6 +235,8 @@ final class RelaySession: NSObject, ObservableObject {
         if let a = activity { ProcessInfo.processInfo.endActivity(a); activity = nil }
         advertiser.stopAdvertisingPeer()
         browser.stopBrowsingForPeers()
+        universal.stop()
+        presenceTimer?.invalidate(); presenceTimer = nil
         session.disconnect()
         audio.isTransmitting = false
         audio.stop()
@@ -205,6 +244,7 @@ final class RelaySession: NSObject, ObservableObject {
         invitedPeers.removeAll()
         DispatchQueue.main.async {
             self.connectedPeers = []
+            self.universalPeers = []
             self.riders = []
             self.nearby = []
             self.scanning = false
@@ -237,11 +277,13 @@ final class RelaySession: NSObject, ObservableObject {
         let target = name.map { Self.idFor(name: $0) } ?? 0
         let channeled = VoiceChannel.wrap(payload, type: .text, targetId: target)
         let all = session.connectedPeers
-        guard !all.isEmpty else { addEvent("Sin peers para el mensaje"); return }
+        let uTargets = universalTargets(for: name, directMultipeer: all.contains { $0.displayName == name })
+        guard !all.isEmpty || uTargets.hasPeers else { addEvent("Sin peers para el mensaje"); return }
         // Privado a alguien conectado directo: solo a ese peer (más discreto).
         var peers = all
         if let name, let direct = all.first(where: { $0.displayName == name }) { peers = [direct] }
-        try? session.send(channeled, toPeers: peers, with: .reliable)
+        if !peers.isEmpty { try? session.send(channeled, toPeers: peers, with: .reliable) }
+        sendUniversal(channeled, keys: uTargets.keys)
         addEvent(name == nil ? "✉️ Mensaje al grupo: \(clean)" : "✉️ Mensaje a \(name!): \(clean)")
     }
 
@@ -252,14 +294,18 @@ final class RelaySession: NSObject, ObservableObject {
     /// mandamos un texto explícito para que quede claro de quién viene.
     func sendAlarm() {
         let peers = session.connectedPeers
-        guard !peers.isEmpty else { addEvent("Sin peers para la alarma"); return }
-        // 1) Alarma (prioridad + aviso de voz genérico en el iPhone).
+        guard !peers.isEmpty || universalTargets(for: nil, directMultipeer: false).hasPeers else {
+            addEvent("Sin peers para la alarma"); return
+        }
+        // 1) Alarma (prioridad + aviso de voz genérico en el iPhone/Android).
         let alarm = VoiceChannel.wrap(Data(), type: .alarm, targetId: 0)
-        try? session.send(alarm, toPeers: peers, with: .reliable)
-        // 2) Texto con el detalle (el iPhone lo lee por voz): quién y qué.
+        if !peers.isEmpty { try? session.send(alarm, toPeers: peers, with: .reliable) }
+        sendUniversal(alarm, keys: nil)
+        // 2) Texto con el detalle (se lee por voz): quién y qué.
         if let payload = "Emergencia. Alerta desde \(localName)".data(using: .utf8) {
             let txt = VoiceChannel.wrap(payload, type: .text, targetId: 0)
-            try? session.send(txt, toPeers: peers, with: .reliable)
+            if !peers.isEmpty { try? session.send(txt, toPeers: peers, with: .reliable) }
+            sendUniversal(txt, keys: nil)
         }
         addEvent("🚨 ALARMA enviada al grupo")
     }
@@ -304,6 +350,105 @@ final class RelaySession: NSObject, ObservableObject {
         talking = on
         audio.isTransmitting = on
         addEvent(on ? "🎙️ Hablando…" : "Micrófono en silencio")
+    }
+
+    // MARK: - Canal Universal
+
+    /// Latido de presencia por Universal cada 2 s (igual que iOS/Android) para que
+    /// los Android vean a la Mac en su radar. Payload: nombre de la Mac.
+    private func startPresenceTimer() {
+        presenceTimer?.invalidate()
+        let t = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self, let payload = self.localName.data(using: .utf8) else { return }
+            self.sendUniversal(VoiceChannel.wrap(payload, type: .presence, targetId: 0), keys: nil)
+        }
+        RunLoop.main.add(t, forMode: .common)
+        presenceTimer = t
+    }
+
+    /// Envía por Universal un paquete propio (sin cabecera de malla, como hace iOS
+    /// con la malla apagada). Se marca como visto para descartar su rebote.
+    private func sendUniversal(_ data: Data, keys: [String]?) {
+        _ = markSeen(data)
+        stateLock.lock(); let has = !universalKeys.isEmpty; stateLock.unlock()
+        guard has else { return }
+        universal.send(data, toKeys: keys)
+    }
+
+    /// A qué conexiones Universal va un mensaje. Privado a un Android: solo a él
+    /// (una clave por dispositivo, porque puede haber dos conexiones al mismo).
+    /// Privado a un iPhone directo: no sale por Universal. Grupo: a todos.
+    private func universalTargets(for name: String?, directMultipeer: Bool) -> (hasPeers: Bool, keys: [String]?) {
+        stateLock.lock(); defer { stateLock.unlock() }
+        guard !universalKeys.isEmpty else { return (false, nil) }
+        guard let name else { return (true, uniqueKeysLocked()) }
+        let matches = universalKeys.filter { universalAliases[$0] == name }
+        if !matches.isEmpty { return (true, [matches.sorted().first!]) }
+        if directMultipeer { return (false, nil) }
+        return (true, uniqueKeysLocked())
+    }
+
+    /// Una clave por dispositivo conocido (evita mensajes dobles) + las sin alias.
+    private func uniqueKeysLocked() -> [String] {
+        var seenAlias = Set<String>()
+        var out: [String] = []
+        for k in universalKeys.sorted() {
+            if let a = universalAliases[k] {
+                if seenAlias.insert(a).inserted { out.append(k) }
+            } else { out.append(k) }
+        }
+        return out
+    }
+
+    private func publishUniversalPeers() {
+        stateLock.lock()
+        var names: [String] = []
+        for k in universalKeys.sorted() {
+            let n = universalAliases[k] ?? "Dispositivo en red local"
+            if !names.contains(n) { names.append(n) }
+        }
+        stateLock.unlock()
+        DispatchQueue.main.async { self.universalPeers = names }
+    }
+
+    /// Huella de un paquete sin ID de malla. true = nuevo; false = ya visto hace
+    /// menos de `dedupWindow` s (rebote entre canales o duplicado por dos rutas).
+    private func markSeen(_ data: Data) -> Bool {
+        let key = data.hashValue &+ data.count
+        let now = Date()
+        stateLock.lock(); defer { stateLock.unlock() }
+        if directSeen.count > 512 { directSeen = directSeen.filter { now.timeIntervalSince($0.value) < Self.dedupWindow } }
+        if let t = directSeen[key], now.timeIntervalSince(t) < Self.dedupWindow { return false }
+        directSeen[key] = now
+        return true
+    }
+
+    /// Paquete llegado por Universal (Android/iPhone en red local). Puede venir
+    /// directo (magic 0x56, lo normal) o envuelto en malla (9 bytes de cabecera).
+    private func handleUniversal(_ data: Data, key: String) {
+        if data.first == VoiceChannel.magic {
+            handlePayload(data, hops: 0, universalKey: key)
+        } else if let inc = mesh.processIncoming(data), inc.isNew {
+            // Desenvuelto para uso local; al lado Multipeer va el paquete de malla
+            // con TTL-1 (mismo mecanismo de IDs/TTL que MeshRelay), sin duplicarlo.
+            _ = markSeen(inc.payload)
+            handlePayload(inc.payload, hops: inc.hops, universalKey: key, forward: false)
+            let peers = session.connectedPeers
+            if let relay = inc.relay, !peers.isEmpty, isControl(inc.payload) {
+                try? session.send(relay, toPeers: peers, with: .reliable)
+                DispatchQueue.main.async { self.relayedPackets += 1 }
+            }
+        }
+    }
+
+    /// Tipos que viajan entre canales en v1 (todo menos audio en vivo).
+    private func isControl(_ data: Data) -> Bool {
+        guard let m = VoiceChannel.unwrap(data) else { return false }
+        switch m.type {
+        case .group, .privateWhisper: return false
+        case .subgroup: return m.isText
+        default: return true
+        }
     }
 
     // MARK: - Radar
@@ -405,8 +550,28 @@ extension RelaySession: MCSessionDelegate {
 
     /// Interpreta el payload de la malla: alimenta el radar con la PRESENCIA y
     /// REPRODUCE el audio de grupo entrante (la Mac ahora es puesto de voz).
-    private func handlePayload(_ data: Data, hops: Int) {
+    private func handlePayload(_ data: Data, hops: Int, universalKey: String? = nil, forward: Bool = true) {
         payloadLogCount += 1
+        // Universal v1 no trae audio en vivo: se descarta el audio y lo crudo.
+        if universalKey != nil, !isControl(data) { return }
+        // Control (presencia/alarma/texto/ack): una sola vez por paquete, aunque
+        // llegue por los dos canales o rebote; luego se repite al otro canal.
+        if forward, isControl(data) {
+            guard markSeen(data) else { return }
+            if universalKey == nil {
+                stateLock.lock(); let hasUniversal = !universalKeys.isEmpty; stateLock.unlock()
+                if hasUniversal {
+                    universal.send(data)
+                    DispatchQueue.main.async { self.relayedPackets += 1 }
+                }
+            } else {
+                let peers = session.connectedPeers
+                if !peers.isEmpty {
+                    try? session.send(data, toPeers: peers, with: .reliable)
+                    DispatchQueue.main.async { self.relayedPackets += 1 }
+                }
+            }
+        }
         guard let msg = VoiceChannel.unwrap(data) else {
             // Sin cabecera de canal: tratar como audio de grupo crudo.
             if payloadLogCount % 50 == 1 { slog.info("payload SIN cabecera VoiceChannel (\(data.count)b) -> play crudo") }
@@ -431,6 +596,28 @@ extension RelaySession: MCSessionDelegate {
                 else if line.hasPrefix("BAT=") { bat = Int(line.dropFirst(4)) }
             }
             noteRiderSeen(String(first), hops: hops, altitudeMeters: alt, batteryPercent: bat)
+            if let universalKey {
+                stateLock.lock(); universalAliases[universalKey] = String(first); stateLock.unlock()
+                publishUniversalPeers()
+            }
+            return
+        }
+        // Alarma y mensajes recibidos (de iPhone o Android): al log de actividad.
+        let myId = Self.idFor(name: localName)
+        switch msg.type {
+        case .alarm:
+            let known = riders.map(\.name) + universalPeers + connectedPeers
+            let who = known.first { Self.idFor(name: $0) == msg.targetId }
+            addEvent(who.map { "🚨 ALARMA de \($0)" } ?? "🚨 ALARMA recibida")
+        case .text:
+            guard msg.targetId == 0 || msg.targetId == myId,
+                  let text = String(data: msg.audio, encoding: .utf8), !text.isEmpty else { return }
+            addEvent((msg.targetId == 0 ? "✉️ Mensaje del grupo: " : "✉️ Mensaje privado: ") + text)
+        case .subgroup where msg.isText:
+            guard msg.targets.contains(myId),
+                  let text = String(data: msg.audio, encoding: .utf8), !text.isEmpty else { return }
+            addEvent("✉️ Mensaje de subgrupo: " + text)
+        default: break
         }
     }
 

@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// Mono Bridge Relay (macOS): nodo de malla fijo. La Mac se une a la red de los
-/// iPhones como un peer más, repite la malla para extender el alcance, y muestra
-/// el radar de quién está conectado. Pensado como nodo de respaldo en
-/// emergencias (no captura audio ni usa sensores).
+/// iPhones (Multipeer) y a los Android (canal Universal, red local) como un peer
+/// más, repite entre ambos canales para unirlos, y muestra el radar de quién está
+/// conectado. Pensado como nodo de respaldo en emergencias.
 @main
 struct RelayApp: App {
     @StateObject private var relay = RelaySession()
@@ -79,7 +79,7 @@ struct RelayView: View {
             statsRow
             eventsCard
             Spacer()
-            Text("Nodo de malla: radar, alarma y mensajes son estables. El audio en vivo es EXPERIMENTAL y puede desconectarse (límite de la conexión directa Mac↔iPhone). El audio no se graba. No reemplaza a servicios de emergencia.")
+            Text("Nodo de malla: une iPhones (Apple) y Android (red local). Radar, alarma y mensajes funcionan con ambos; el audio en vivo es solo con iPhone, es EXPERIMENTAL y puede desconectarse. El audio no se graba. No reemplaza a servicios de emergencia.")
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .padding(20)
@@ -124,6 +124,15 @@ struct RelayView: View {
             .buttonStyle(.borderedProminent)
             .tint(relay.scanning ? .orange : .blue)
 
+            // Canal Universal (Android u otros por red local): se unen solos.
+            ForEach(relay.universalPeers, id: \.self) { name in
+                HStack {
+                    Image(systemName: "smartphone").foregroundStyle(.green)
+                    Text(name)
+                    Spacer()
+                    Text("Conectado · red local").font(.caption).foregroundStyle(.secondary)
+                }
+            }
             ForEach(relay.nearby, id: \.self) { name in
                 HStack {
                     Image(systemName: "iphone.gen3").foregroundStyle(.blue)
@@ -133,8 +142,8 @@ struct RelayView: View {
                         .buttonStyle(.borderedProminent)
                 }
             }
-            if relay.scanning && relay.nearby.isEmpty && relay.connectedPeers.isEmpty {
-                Text("Buscando… el otro dispositivo debe tener el bridge iniciado y Red local activada.")
+            if relay.scanning && relay.nearby.isEmpty && relay.allPeers.isEmpty {
+                Text("Buscando… iPhones o Android con el bridge iniciado y Red local activada. Los Android deben estar en la misma WiFi.")
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -160,14 +169,14 @@ struct RelayView: View {
             // Destinatario: todo el grupo o una persona conectada.
             Picker("Para", selection: $recipient) {
                 Text("Todo el grupo").tag("")
-                ForEach(relay.connectedPeers, id: \.self) { name in
+                ForEach(relay.allPeers, id: \.self) { name in
                     Text(name).tag(name)
                 }
             }
             .pickerStyle(.menu)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Mensaje de texto (el iPhone lo lee por voz).
+            // Mensaje de texto (el iPhone o Android lo lee por voz).
             HStack(spacing: 8) {
                 TextField(recipient.isEmpty ? "Mensaje al grupo…" : "Mensaje a \(recipient)…", text: $messageText)
                     .textFieldStyle(.roundedBorder)
@@ -176,7 +185,7 @@ struct RelayView: View {
                 Button("Enviar") { enviarMensaje() }
                     .disabled(messageText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            Text("La alarma y los mensajes son avisos cortos: el teléfono los lee por voz. Más confiables que el audio en vivo.")
+            Text("La alarma y los mensajes son avisos cortos: iPhone y Android los leen por voz. Más confiables que el audio en vivo.")
                 .font(.caption2).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -331,7 +340,7 @@ struct RelayView: View {
 
     private var statsRow: some View {
         HStack(spacing: 16) {
-            stat("Conectados", "\(relay.connectedPeers.count)")
+            stat("Conectados", "\(relay.allPeers.count)")
             stat("Nodos vistos", "\(relay.riders.count)")
             stat("Relevados", "\(relay.relayedPackets)")
         }

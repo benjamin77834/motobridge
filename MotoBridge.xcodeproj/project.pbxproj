@@ -31,6 +31,7 @@
 		7D24130E22540C70E52D7195 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C5059A7A9A5DD05947BACC5 /* Assets.xcassets */; };
 		89DB8051D90B9BB7AA5A6478 /* IntercomDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DFB6FCF0D1AE67FB56C4653 /* IntercomDevice.swift */; };
 		8D22C5026EA644FB635B06B8 /* VoiceChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */; };
+		8F4CDC6BBD58A5A18E4BA334 /* UniversalTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B9011F11E0CA9A2AF51AD37 /* UniversalTransport.swift */; };
 		97EF3F195FB248C10A7B31E7 /* RadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC10E228F756A59AB17CCE5A /* RadarView.swift */; };
 		9FE43B4358E991592EA8B9AE /* VoiceChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */; };
 		A5368E58837BF2A32D982652 /* NetworkBridgeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */; };
@@ -94,6 +95,7 @@
 		8007F93A7156DE233E818E56 /* RelayAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayAudio.swift; sourceTree = "<group>"; };
 		80CF211F3BDA6713A45C7216 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeController.swift; sourceTree = "<group>"; };
+		9B9011F11E0CA9A2AF51AD37 /* UniversalTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalTransport.swift; sourceTree = "<group>"; };
 		9C62488C8C39EC93531E9631 /* AudioIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioIO.swift; sourceTree = "<group>"; };
 		9E30CBE0D99AAA8BB74D3E37 /* CallKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallKitManager.swift; sourceTree = "<group>"; };
 		BF01898A30F24B8F72F05CF7 /* MotoBridgeIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotoBridgeIntents.swift; sourceTree = "<group>"; };
@@ -128,6 +130,7 @@
 				8007F93A7156DE233E818E56 /* RelayAudio.swift */,
 				0830C76A43C6EA7F180FE856 /* RelaySession.swift */,
 				75E19ACCE648FF970E174DC5 /* TrailSparkline.swift */,
+				9B9011F11E0CA9A2AF51AD37 /* UniversalTransport.swift */,
 			);
 			path = MonoBridgeRelay;
 			sourceTree = "<group>";
@@ -521,6 +524,7 @@
 				05E47515E99D85A42D3912F3 /* RelayAudio.swift in Sources */,
 				2F621B630907BABCDB0B2374 /* RelaySession.swift in Sources */,
 				6876A29CC800732D3C61530B /* TrailSparkline.swift in Sources */,
+				8F4CDC6BBD58A5A18E4BA334 /* UniversalTransport.swift in Sources */,
 				9FE43B4358E991592EA8B9AE /* VoiceChannel.swift in Sources */,
 				46A0AAADFF2B7405F3D6676B /* VoiceEnhancer.swift in Sources */,
 			);
