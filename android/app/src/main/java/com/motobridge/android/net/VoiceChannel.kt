@@ -23,6 +23,11 @@ object VoiceChannel {
     const val SUBGROUP: Byte = 4
     const val PRESENCE: Byte = 5
     const val ACK: Byte = 6   // acuse de recibo (targetId = nameId del receptor)
+    /** "X quiere conectarse": targetId = nameId del destinatario (0 = desconocido), payload = nombre del emisor. */
+    const val PICKUP: Byte = 7
+
+    fun wrapPickup(sender: String, targetId: Int): ByteArray =
+        wrap(sender.toByteArray(Charsets.UTF_8), PICKUP, targetId)
 
     fun wrap(audio: ByteArray, type: Byte, targetId: Int): ByteArray {
         val out = ByteArray(HEADER + audio.size)
@@ -91,7 +96,7 @@ object VoiceChannel {
 
         // Formato clásico (6 bytes). Validar que el tipo sea conocido.
         if (data.size <= HEADER) return null
-        if (type != GROUP && type != PRIVATE && type != ALARM && type != TEXT && type != PRESENCE) return null
+        if (type != GROUP && type != PRIVATE && type != ALARM && type != TEXT && type != PRESENCE && type != PICKUP) return null
         val target = ((data[2].toInt() and 0xFF) shl 24) or
                      ((data[3].toInt() and 0xFF) shl 16) or
                      ((data[4].toInt() and 0xFF) shl 8) or

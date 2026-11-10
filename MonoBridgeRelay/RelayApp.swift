@@ -38,6 +38,15 @@ struct RelayView: View {
         VStack(alignment: .leading, spacing: 16) {
             header
 
+            if let notice = relay.pickupNotice {
+                Label(notice, systemImage: "phone.arrow.down.left")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(Color.blue.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
             Button {
                 relay.toggle()
             } label: {

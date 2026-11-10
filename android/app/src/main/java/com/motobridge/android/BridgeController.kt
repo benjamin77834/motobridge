@@ -41,6 +41,45 @@ class BridgeController(context: Context) {
     var inputLevel by mutableStateOf(0f); private set
     var events by mutableStateOf(listOf<String>()); private set
 
+    // --- Pickup y dispositivos cercanos ---
+
+    /** Dispositivos vistos por NSD que aún no están conectados (botón "Conectar"). */
+    var nearby by mutableStateOf(listOf<String>()); private set
+    /** Aviso visible "X quiere conectarse" (se borra solo). */
+    var pickupNotice by mutableStateOf<String?>(null); private set
+    private val lastPickup = HashMap<String, Long>()
+    private val uiHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val clearPickup = Runnable { pickupNotice = null }
+
+    /**
+     * Conecta a un dispositivo cercano y le manda un pickup ("X quiere conectarse").
+     * El otro lado suena un timbre suave y conecta de vuelta. Retrocompatible: las
+     * apps viejas descartan el tipo de canal desconocido.
+     */
+    fun connectToNearby(name: String) {
+        if (!isRunning) return
+        val plain = com.motobridge.android.net.VoiceChannel.wrapPickup(
+            localName, com.motobridge.android.net.VoiceChannel.idFor(name))
+        val toSend = if (meshEnabled) mesh.wrapOutgoing(plain) else plain
+        transport.connectTo(name, toSend)
+    }
+
+    /** Pickup recibido: aviso visual + timbre suave. La conexión de vuelta ya existe:
+     *  UDP agrega al emisor como peer al recibir su paquete. */
+    private fun handlePickup(from: String) {
+        uiHandler.post {
+            val now = System.currentTimeMillis()
+            if (now - (lastPickup[from] ?: 0L) < 8000) return@post
+            lastPickup[from] = now
+            pickupNotice = "$from quiere conectarse"
+            events = (listOf(timestamp() + " · 📞 $from quiere conectarse") + events).take(12)
+            if (isRunning) com.motobridge.android.audio.ChimePlayer.play(
+                com.motobridge.android.audio.ChimePlayer.Kind.PICKUP)
+            uiHandler.removeCallbacks(clearPickup)
+            uiHandler.postDelayed(clearPickup, 6000)
+        }
+    }
+
     /** Consejo de conexión cuando el bridge corre pero no hay riders conectados. */
     val connectionHint: String
         get() {
@@ -367,10 +406,15 @@ class BridgeController(context: Context) {
             }
         }
         transport.onState = { s -> state = s }
+        transport.onNearby = { list -> uiHandler.post { nearby = list } }
         transport.onPeer = { name ->
             // Detectar riders nuevos para notificar quién se conectó.
             val newSet = name?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
             val added = newSet - knownPeers
+            // Si ya había gente y llega alguien nuevo: timbre suave (además de la voz).
+            if (added.isNotEmpty() && knownPeers.isNotEmpty() && isRunning) {
+                com.motobridge.android.audio.ChimePlayer.play(com.motobridge.android.audio.ChimePlayer.Kind.CONNECTED)
+            }
             for (r in added) notifyRiderConnected(r)
             // Modo intercom: al conectar el primer rider, abrir el micrófono solo.
             if (autoIntercom && knownPeers.isEmpty() && newSet.isNotEmpty()) {
@@ -434,6 +478,10 @@ class BridgeController(context: Context) {
                 } else {
                     noteVoiceActivity(); audio.playFrom(peerId, msg.audio)
                 }
+            }
+            com.motobridge.android.net.VoiceChannel.PICKUP -> {
+                val who = String(msg.audio, Charsets.UTF_8)
+                if ((msg.targetId == 0 || msg.targetId == myNameId) && who.isNotBlank()) handlePickup(who)
             }
             com.motobridge.android.net.VoiceChannel.ACK -> {
                 // Acuse de recibo de un mensaje que YO envié.

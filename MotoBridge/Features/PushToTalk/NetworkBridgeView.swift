@@ -15,6 +15,15 @@ struct NetworkBridgeView: View {
         ScrollView {
             VStack(spacing: 18) {
                 // PANTALLA PRINCIPAL SIMPLE (uso en moto):
+                if let notice = controller.pickupNotice {
+                    Label(notice, systemImage: "phone.arrow.down.left")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color.blue.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .accessibilityLabel(notice)
+                }
                 statusCard          // estado + iniciar/detener
                 nearbyDevicesCard   // dispositivos cercanos: toca para conectar (tipo Bluetooth)
                 radarCard           // LED de cercanía de cada rider

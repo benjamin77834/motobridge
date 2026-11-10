@@ -126,3 +126,30 @@ Un receptor válido:
 - [ ] Permisos: `RECORD_AUDIO`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE` (para mDNS), `INTERNET`.
 
 Con esto, un teléfono Android y un iPhone en modo Universal, en la misma red WiFi/hotspot, deberían establecer audio bidireccional.
+
+---
+
+## 9. Pickup ("X quiere conectarse") y timbre de conexión
+
+**Decisión:** no se crea un tipo nuevo de datagrama (§4). El pickup reutiliza la capa de canal `VoiceChannel` (la misma de grupo/privado/alarma/texto/presencia) con un **tipo nuevo reservado**:
+
+```
+byte 0     : 0x56 ('V')
+byte 1     : 0x07  (pickup)
+bytes 2..5 : targetId (UInt32 big-endian) = FNV-1a del nombre del destinatario; 0 = desconocido
+bytes 6..N : nombre del emisor, UTF-8
+```
+
+Cuándo se envía: el usuario toca **Conectar** sobre un dispositivo de la lista de cercanos. Además de iniciar la conexión, se manda un pickup por el canal disponible:
+
+- **Multipeer (iPhone/iPad/Mac):** como `context` de la invitación (`invitePeer(..., withContext:)`), porque aún no hay sesión por la que mandar datos. Los peers viejos ignoran el contexto.
+- **UDP/Bonjour (Android/iOS/Mac):** como datagrama normal (§4, cabecera `M`) hacia el dispositivo, con malla (`MeshRelay`) si está activa. En Android basta resolver NSD y escribir; en iOS se abre la conexión saliente aunque la regla §3 diga que debía esperar.
+- Si el dispositivo está en ambos canales llegan dos pickups: el receptor ignora repetidos del mismo emisor durante 8 s.
+
+Al recibirlo (si `targetId` es 0 o el propio):
+1. Aviso discreto: timbre corto de dos toques (volumen bajo) y texto "X quiere conectarse".
+2. Conexión de vuelta: en Multipeer se **acepta la invitación** que lo transportó (aunque el auto-conectar esté apagado) y no se invita de vuelta durante 12 s; el desempate por UID (iOS/Mac) y la regla de nombre menor (UDP) no cambian. En UDP el emisor ya queda como peer al recibir su paquete y se evita abrir una segunda conexión hacia él.
+
+**Retrocompatibilidad:** una app que no conoce el tipo `0x07` no lo reconoce como canal (`unwrap` devuelve nil/null) y lo trata como audio crudo de grupo: son ~10-30 bytes, un clic imperceptible de pocos ms, sin fallo ni cierre de conexión. En Multipeer viaja en el contexto de invitación, que las apps viejas no leen.
+
+**Timbre de conexión:** no es un paquete. Cada app lo genera localmente (2 notas ascendentes, Mi5→Si5, con envolvente, ~0.8 s, volumen ~0.3) cuando **ya había gente conectada** y se conecta alguien nuevo. Se sintetiza por código (sin assets) y sale por la ruta de audio activa sin abrir el micrófono ni cambiar la sesión.

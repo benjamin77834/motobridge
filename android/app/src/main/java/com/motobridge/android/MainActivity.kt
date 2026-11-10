@@ -199,6 +199,28 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
         }
     }
 
+    // Aviso de pickup: otro dispositivo quiere conectarse.
+    controller.pickupNotice?.let { notice ->
+        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2A3A))) {
+            Text("📞 $notice", Modifier.padding(12.dp), fontWeight = FontWeight.SemiBold)
+        }
+    }
+
+    // Dispositivos cercanos (descubiertos, aún no conectados): botón Conectar + pickup.
+    if (controller.isRunning && controller.nearby.isNotEmpty()) {
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("DISPOSITIVOS CERCANOS", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                for (name in controller.nearby) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(name, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                        Button(onClick = { controller.connectToNearby(name) }) { Text("Conectar") }
+                    }
+                }
+            }
+        }
+    }
+
     // Radar de riders: LED de color por cercanía
     if (controller.isRunning && controller.riderSignals.isNotEmpty()) {
         Card(Modifier.fillMaxWidth()) {

@@ -62,8 +62,69 @@ final class NetworkBridgeController: ObservableObject {
     }
 
     /// Conecta manualmente a un iPhone descubierto (modo manual), por nombre.
+    /// Además de conectar, manda un "pickup" ("X quiere conectarse") por el canal
+    /// disponible: contexto de la invitación en Multipeer y/o paquete UDP en
+    /// Universal. El otro lado lo anuncia con un timbre suave y conecta de vuelta.
     func connectToPeer(named name: String) {
-        peer.connectManually(toName: name)
+        let target = NetworkBridgeController.idFor(name: name)
+        let plain = VoiceChannel.wrapPickup(from: localName, to: target)
+        peer.connectManually(toName: name, pickup: plain)
+        let udp = meshEnabled ? mesh.wrapOutgoing(plain) : plain
+        for t in [transport, gatewayTransport] {
+            (t as? LocalNetworkTransport)?.connectManually(toName: name, pickup: udp)
+        }
+    }
+
+    // MARK: - Pickup y timbre de conexión
+
+    /// ¿Es un pickup sin envoltura de malla? Va dirigido a un solo dispositivo, así
+    /// que no se reenvía entre transportes del puente.
+    private static func isPickup(_ data: Data) -> Bool {
+        data.count >= 2 && data[data.startIndex] == VoiceChannel.magic
+            && data[data.startIndex + 1] == VoiceChannelType.pickup.rawValue
+    }
+
+    /// Aviso visible "X quiere conectarse" (se borra solo a los pocos segundos).
+    @Published private(set) var pickupNotice: String?
+    private var lastPickup: [String: Date] = [:]
+    private var chimePlayer: AVAudioPlayer?
+    private var pickupClearWork: DispatchWorkItem?
+
+    /// Timbre sintetizado, muy suave y breve. Usa AVAudioPlayer sobre la sesión
+    /// ya activa (no cambia categoría ni toca el micrófono) y solo suena con el
+    /// bridge en marcha, así sale por la misma ruta que el intercom.
+    private func playChime(_ kind: ChimeSynth.Kind) {
+        guard isRunning else { return }
+        DispatchQueue.main.async {
+            guard let player = try? AVAudioPlayer(data: ChimeSynth.wav(kind)) else { return }
+            player.volume = 0.3
+            player.prepareToPlay()
+            player.play()
+            self.chimePlayer = player
+        }
+    }
+
+    /// Pickup recibido (por Multipeer o UDP): aviso discreto. La conexión de
+    /// vuelta ya la hace la propia sesión (acepta la invitación / responde por la
+    /// misma conexión UDP). Se ignoran repetidos del mismo emisor (llega por 2 canales).
+    private func handlePickup(from name: String) {
+        DispatchQueue.main.async {
+            let now = Date()
+            if let t = self.lastPickup[name], now.timeIntervalSince(t) < 8 { return }
+            self.lastPickup[name] = now
+            self.log.info(.bridge, "Pickup de \(name)")
+            self.pickupNotice = "\(name) quiere conectarse"
+            self.playChime(.pickup)
+            let content = UNMutableNotificationContent()
+            content.title = "Mono Bridge"
+            content.body = "\(name) quiere conectarse"
+            UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+            self.pickupClearWork?.cancel()
+            let work = DispatchWorkItem { [weak self] in self?.pickupNotice = nil }
+            self.pickupClearWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6, execute: work)
+        }
     }
 
     /// ¿El escaneo de dispositivos está activo? (consume batería/radio). Espejo
@@ -556,6 +617,7 @@ final class NetworkBridgeController: ObservableObject {
         // Apple + Universal a la vez). Debe ir tras wireTransport inicial.
         applyModeTransports()
         peer.autoConnect = peerAutoConnect   // aplicar modo manual/auto guardado
+        peer.onPickup = { [weak self] name in self?.handlePickup(from: name) }
     }
 
     /// Maneja un cambio de ruta de audio del sistema (p. ej. conectar AirPods).
@@ -1023,7 +1085,7 @@ final class NetworkBridgeController: ObservableObject {
                 self.playChanneled(data, hops: 0)   // sin mesh = conexión directa
             }
             // En modo puente, reenviar al lado Android lo que llega de los iPhones.
-            self.gatewayTransport?.sendAudio(data)
+            if !Self.isPickup(data) { self.gatewayTransport?.sendAudio(data) }
         }
         t.onStateChange = { [weak self] s in
             DispatchQueue.main.async {
@@ -1036,6 +1098,8 @@ final class NetworkBridgeController: ObservableObject {
                 guard let self else { return }
                 let newNames = Set(connected.map { $0.name })
                 let added = newNames.subtracting(self.knownPeerNames)
+                // Si ya había gente y llega alguien nuevo: timbre suave (además de la voz).
+                if !added.isEmpty, !self.knownPeerNames.isEmpty { self.playChime(.connected) }
                 for rider in added { self.notifyRiderConnected(rider) }
                 // Modo intercom: abrir micrófono solo al conectar el primer rider.
                 if self.autoIntercom, self.knownPeerNames.isEmpty, !newNames.isEmpty {
@@ -1081,7 +1145,7 @@ final class NetworkBridgeController: ObservableObject {
                 self.playChanneled(data, hops: 0)
             }
             // Reenviar al lado Apple (Multipeer) para que los iPhones lo oigan.
-            self.transport.sendAudio(data)
+            if !Self.isPickup(data) { self.transport.sendAudio(data) }
         }
         // El estado/eventos del lado Android se registran como eventos de puente.
         t.onEvent = { [weak self] line in
@@ -1176,6 +1240,13 @@ final class NetworkBridgeController: ObservableObject {
         case .ack:
             // Acuse de recibo de un mensaje que YO envié: marcar entregado.
             handleAck(fromNameId: msg.targetId)
+        case .pickup:
+            // "X quiere conectarse" (llegó por UDP; por Multipeer va en la invitación).
+            if msg.targetId == 0 || msg.targetId == myNameId,
+               let who = String(data: msg.audio, encoding: .utf8), !who.isEmpty {
+                handlePickup(from: who)
+            }
+            return
         }
         DispatchQueue.main.async { self.packetsReceived += 1 }
     }

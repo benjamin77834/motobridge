@@ -66,20 +66,38 @@ final class PeerBridgeSession: NSObject, ObservableObject {
 
     /// Invitación manual: la vista llama a esto cuando el usuario toca un peer
     /// descubierto para conectarse a él (modo manual).
-    func connectManually(to peerID: MCPeerID) {
+    /// `pickup` (opcional) viaja como contexto de la invitación: es el aviso
+    /// "X quiere conectarse". Los peers viejos ignoran el contexto.
+    func connectManually(to peerID: MCPeerID, pickup: Data? = nil) {
         guard !session.connectedPeers.contains(peerID) else { return }
         guard session.connectedPeers.count < Self.maxPeers else {
             addEvent("Grupo lleno")
             return
         }
-        invite(peerID)
+        invite(peerID, context: pickup)
     }
 
     /// Conecta manualmente a un peer descubierto por su nombre (para la UI).
-    func connectManually(toName name: String) {
+    func connectManually(toName name: String, pickup: Data? = nil) {
         if let p = discoveredPeers.first(where: { $0.displayName == name }) {
-            connectManually(to: p)
+            connectManually(to: p, pickup: pickup)
         }
+    }
+
+    /// Se invoca cuando una invitación entrante trae un pickup (nombre del emisor).
+    var onPickup: ((String) -> Void)?
+
+    /// Cuándo recibimos invitación de cada peer. Mientras sea reciente NO lo
+    /// invitamos de vuelta (evita la doble invitación cruzada).
+    private var invitedByAt: [MCPeerID: Date] = [:]
+    private let invitedByLock = NSLock()
+    private func recentlyInvitedBy(_ peerID: MCPeerID) -> Bool {
+        invitedByLock.lock(); defer { invitedByLock.unlock() }
+        guard let t = invitedByAt[peerID] else { return false }
+        return Date().timeIntervalSince(t) < 12
+    }
+    private func noteInvitedBy(_ peerID: MCPeerID) {
+        invitedByLock.lock(); invitedByAt[peerID] = Date(); invitedByLock.unlock()
     }
 
     /// Diagnóstico visible en pantalla para depurar el descubrimiento.
@@ -203,11 +221,11 @@ final class PeerBridgeSession: NSObject, ObservableObject {
     }
 
     /// Invita a un peer descubierto a conectarse.
-    func invite(_ peer: MCPeerID) {
+    func invite(_ peer: MCPeerID, context: Data? = nil) {
         log.info(.bridge, "Multipeer: invitando a \(peer.displayName)")
         addEvent("Invitando a \(peer.displayName)")
         DispatchQueue.main.async { self.state = .connecting }
-        browser.invitePeer(peer, to: session, withContext: nil, timeout: 10)
+        browser.invitePeer(peer, to: session, withContext: context, timeout: 10)
     }
 
     /// Reconexión automática: si seguimos activos y el peer sigue anunciándose,
@@ -222,6 +240,7 @@ final class PeerBridgeSession: NSObject, ObservableObject {
                                     otherName: peerID.displayName,
                                     otherUID: self.peerUIDs[peerID]) else { return }
             guard !self.session.connectedPeers.contains(peerID) else { return }
+            guard !self.recentlyInvitedBy(peerID) else { return }
             if self.discoveredPeers.contains(peerID) {
                 self.log.info(.bridge, "Multipeer: reintentando conexión con \(peerID.displayName)")
                 self.addEvent("Reintentando \(peerID.displayName)…")
@@ -321,6 +340,12 @@ extension PeerBridgeSession: MCNearbyServiceAdvertiserDelegate {
         }
         log.info(.bridge, "Multipeer: invitación recibida de \(peerID.displayName), aceptando")
         addEvent("Invitación recibida de \(peerID.displayName)")
+        // Pickup en el contexto: "X quiere conectarse". La invitación ya es la
+        // conexión de vuelta (se acepta aunque el auto-conectar esté apagado).
+        if let context, let p = VoiceChannel.parsePickup(context) {
+            noteInvitedBy(peerID)
+            onPickup?(p.sender)
+        }
         DispatchQueue.main.async { self.state = .connecting }
         invitationHandler(true, session)
     }
@@ -362,6 +387,11 @@ extension PeerBridgeSession: MCNearbyServiceBrowserDelegate {
         // solo invita el que tenga el displayName "menor". El otro aceptará.
         // Si ya estamos conectados a este peer, no reinvitar.
         guard !session.connectedPeers.contains(peerID) else { return }
+        // Si él ya nos invitó (pickup / su propio auto-conectar), no cruzar invitaciones.
+        guard !recentlyInvitedBy(peerID) else {
+            addEvent("\(peerID.displayName) ya me invitó, espero")
+            return
+        }
         // No invitar si el grupo ya está lleno.
         guard session.connectedPeers.count < Self.maxPeers else {
             addEvent("Grupo lleno, no invito a \(peerID.displayName)")

@@ -1,5 +1,6 @@
 import Foundation
 import MultipeerConnectivity
+import AVFoundation
 import Combine
 import os
 
@@ -146,13 +147,61 @@ final class RelaySession: NSObject, ObservableObject {
 
     func toggleScan() { scanning ? stopScan() : startScan() }
 
-    /// Conecta a un dispositivo de la lista (botón Conectar).
+    /// Conecta a un dispositivo de la lista (botón Conectar). La invitación lleva
+    /// un "pickup" ("X quiere conectarse") en el contexto: el otro lado suena un
+    /// timbre suave y acepta. Los peers viejos ignoran el contexto.
     func connect(toName name: String) {
         guard let peer = foundPeers.first(where: { $0.displayName == name }),
               !session.connectedPeers.contains(peer), !invitedPeers.contains(peer) else { return }
         invitedPeers.insert(peer)
-        browser.invitePeer(peer, to: session, withContext: nil, timeout: 15)
-        addEvent("Invitando a \(name)")
+        let pickup = VoiceChannel.wrapPickup(from: localName, to: Self.idFor(name: name))
+        browser.invitePeer(peer, to: session, withContext: pickup, timeout: 15)
+        addEvent("Invitando a \(name) (pickup)")
+    }
+
+    // MARK: Pickup y timbre
+
+    /// Aviso visible "X quiere conectarse" (se borra solo).
+    @Published private(set) var pickupNotice: String?
+    private var lastPickup: [String: Date] = [:]
+    private var pickupClearWork: DispatchWorkItem?
+    /// Quién nos invitó con pickup hace poco (no lo invitamos de vuelta: evita cruce).
+    private var invitedByAt: [MCPeerID: Date] = [:]
+    private var chimePlayer: AVAudioPlayer?
+
+    private func recentlyInvitedBy(_ peer: MCPeerID) -> Bool {
+        stateLock.lock(); defer { stateLock.unlock() }
+        guard let t = invitedByAt[peer] else { return false }
+        return Date().timeIntervalSince(t) < 12
+    }
+
+    /// Timbre sintetizado (sin assets), volumen bajo. AVAudioPlayer es
+    /// independiente del motor de voz de la Mac y no abre el micrófono.
+    private func playChime(_ kind: ChimeSynth.Kind) {
+        DispatchQueue.main.async {
+            guard let player = try? AVAudioPlayer(data: ChimeSynth.wav(kind)) else { return }
+            player.volume = 0.3
+            player.prepareToPlay()
+            player.play()
+            self.chimePlayer = player
+        }
+    }
+
+    /// Pickup recibido (invitación Multipeer o paquete Universal). Repetidos del
+    /// mismo emisor en 8 s se ignoran (puede llegar por los dos canales).
+    private func handlePickup(from name: String) {
+        DispatchQueue.main.async {
+            let now = Date()
+            if let t = self.lastPickup[name], now.timeIntervalSince(t) < 8 { return }
+            self.lastPickup[name] = now
+            self.addEvent("📞 \(name) quiere conectarse")
+            self.pickupNotice = "\(name) quiere conectarse"
+            self.playChime(.pickup)
+            self.pickupClearWork?.cancel()
+            let work = DispatchWorkItem { [weak self] in self?.pickupNotice = nil }
+            self.pickupClearWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6, execute: work)
+        }
     }
 
     private func refreshNearby() {
@@ -404,12 +453,21 @@ final class RelaySession: NSObject, ObservableObject {
         stateLock.lock()
         var names: [String] = []
         for k in universalKeys.sorted() {
-            let n = universalAliases[k] ?? "Dispositivo en red local"
+            let n = universalAliases[k] ?? Self.unnamedUniversal
             if !names.contains(n) { names.append(n) }
         }
         stateLock.unlock()
-        DispatchQueue.main.async { self.universalPeers = names }
+        DispatchQueue.main.async {
+            // Timbre suave si ya había gente y aparece un dispositivo Universal nuevo
+            // (ya identificado por nombre; el marcador genérico no cuenta).
+            let known = self.universalPeers.filter { $0 != Self.unnamedUniversal }
+            let added = names.filter { $0 != Self.unnamedUniversal && !known.contains($0) }
+            if !added.isEmpty, !self.connectedPeers.isEmpty || !known.isEmpty { self.playChime(.connected) }
+            self.universalPeers = names
+        }
     }
+
+    private static let unnamedUniversal = "Dispositivo en red local"
 
     /// Huella de un paquete sin ID de malla. true = nuevo; false = ya visto hace
     /// menos de `dedupWindow` s (rebote entre canales o duplicado por dos rutas).
@@ -509,6 +567,13 @@ extension RelaySession: MCSessionDelegate {
         switch state {
         case .connected:
             invitedPeers.remove(peerID)   // conexión lograda, ya no "pendiente"
+            // Timbre suave si ya había gente conectada y llega alguien nuevo.
+            let others = session.connectedPeers.filter { $0 != peerID }
+            DispatchQueue.main.async {
+                if !others.isEmpty || self.universalPeers.contains(where: { $0 != Self.unnamedUniversal }) {
+                    self.playChime(.connected)
+                }
+            }
             addEvent("✅ Conectado con \(peerID.displayName)")
             noteRiderSeen(peerID.displayName, hops: 0)
         case .connecting:
@@ -552,6 +617,12 @@ extension RelaySession: MCSessionDelegate {
     /// REPRODUCE el audio de grupo entrante (la Mac ahora es puesto de voz).
     private func handlePayload(_ data: Data, hops: Int, universalKey: String? = nil, forward: Bool = true) {
         payloadLogCount += 1
+        // Pickup ("X quiere conectarse"): va dirigido a un dispositivo, no se repite
+        // entre canales. Los pickups de otros destinatarios se ignoran.
+        if let p = VoiceChannel.parsePickup(data) {
+            if p.targetId == 0 || p.targetId == Self.idFor(name: localName) { handlePickup(from: p.sender) }
+            return
+        }
         // Universal v1 no trae audio en vivo: se descarta el audio y lo crudo.
         if universalKey != nil, !isControl(data) { return }
         // Control (presencia/alarma/texto/ack): una sola vez por paquete, aunque
@@ -641,6 +712,10 @@ extension RelaySession: MCNearbyServiceAdvertiserDelegate {
             invitationHandler(false, nil)
             return
         }
+        if let context, let p = VoiceChannel.parsePickup(context) {
+            stateLock.lock(); invitedByAt[peerID] = Date(); stateLock.unlock()
+            handlePickup(from: p.sender)
+        }
         let accept = session.connectedPeers.count < Self.maxPeers
         addEvent(accept ? "Invitación de \(peerID.displayName), aceptando" : "Lleno, rechazo \(peerID.displayName)")
         invitationHandler(accept, accept ? session : nil)
@@ -668,6 +743,7 @@ extension RelaySession: MCNearbyServiceBrowserDelegate {
         guard autoConnect else { return }
         guard !session.connectedPeers.contains(peerID) else { return }
         guard !invitedPeers.contains(peerID) else { return }
+        guard !recentlyInvitedBy(peerID) else { return }   // él ya me invitó (pickup)
         guard session.connectedPeers.count < Self.maxPeers else { return }
         // Desempate por UID (mismo criterio que el iPhone): invita el UID menor,
         // el otro espera. Sin UID del otro (versión vieja) cae al nombre.

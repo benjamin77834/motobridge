@@ -35,6 +35,8 @@ class LocalNetworkTransport(
     /** (peerId, pcmBytes) — el peerId permite mezclar por emisor en el grupo. */
     var onAudio: ((String, ByteArray) -> Unit)? = null
     var onPeer: ((String?) -> Unit)? = null
+    /** Servicios vistos por NSD que aún no son peers (lista "Dispositivos cercanos"). */
+    var onNearby: ((List<String>) -> Unit)? = null
 
     private val nsd: NsdManager =
         context.getSystemService(Context.NSD_SERVICE) as NsdManager
@@ -51,6 +53,13 @@ class LocalNetworkTransport(
 
     /** Máximo de peers (común con Apple/iOS). 5 = grupo de 6 contándote. */
     private val maxPeers = 5
+
+    /** Servicios NSD descubiertos, por nombre (para conectar a mano). */
+    private val found = java.util.concurrent.ConcurrentHashMap<String, NsdServiceInfo>()
+
+    private fun publishNearby() {
+        onNearby?.invoke(found.keys.filter { !peers.containsKey(it) }.sorted())
+    }
 
     private var registrationListener: NsdManager.RegistrationListener? = null
     private var discoveryListener: NsdManager.DiscoveryListener? = null
@@ -81,6 +90,8 @@ class LocalNetworkTransport(
         socket?.close()
         socket = null
         peers.clear()
+        found.clear()
+        onNearby?.invoke(emptyList())
         onPeer?.invoke(null)
         onState?.invoke(TransportState.NOT_CONNECTED)
         emit("Detenido")
@@ -107,6 +118,7 @@ class LocalNetworkTransport(
         onState?.invoke(TransportState.CONNECTED)
         onPeer?.invoke(peers.keys.joinToString(", "))
         emit("✅ Conectado con $name (grupo: ${peers.size})")
+        publishNearby()
     }
 
     // MARK: - Registro (publicar servicio)
@@ -145,6 +157,8 @@ class LocalNetworkTransport(
             override fun onServiceFound(info: NsdServiceInfo) {
                 if (info.serviceName == localName) return // yo mismo
                 emit("Encontrado ${info.serviceName}")
+                found[info.serviceName] = info
+                publishNearby()
                 // Regla de conexión: el nombre "menor" inicia; el otro espera.
                 if (localName < info.serviceName) {
                     resolveAndConnect(info)
@@ -162,6 +176,8 @@ class LocalNetworkTransport(
                 // que conocemos su IP:puerto podemos seguir enviándole audio
                 // aunque NSD lo pierda; solo lo quitamos si lleva MUCHO sin audio
                 // (30 s), para tolerar cortes de red en movimiento.
+                found.remove(info.serviceName)
+                publishNearby()
                 val p = peers[info.serviceName] ?: return
                 if (System.currentTimeMillis() - p.lastRx < 30000) {
                     emit("NSD perdió ${info.serviceName} pero mantenemos la ruta (bache de red)")
@@ -176,6 +192,34 @@ class LocalNetworkTransport(
         }
         discoveryListener = listener
         nsd.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
+    }
+
+    /**
+     * Botón "Conectar" sobre un dispositivo cercano: resuelve su dirección, lo
+     * agrega al grupo (UDP no necesita handshake, así que da igual la regla de
+     * nombre) y le manda `pickup` ya empaquetado (VoiceChannel, con malla si aplica).
+     */
+    fun connectTo(name: String, pickup: ByteArray) {
+        val info = found[name] ?: return
+        onState?.invoke(TransportState.CONNECTING)
+        nsd.resolveService(info, object : NsdManager.ResolveListener {
+            override fun onResolveFailed(info: NsdServiceInfo, errorCode: Int) {
+                emit("Resolve falló ${info.serviceName} ($errorCode)")
+            }
+            override fun onServiceResolved(info: NsdServiceInfo) {
+                addPeer(info.serviceName, info.host, info.port)
+                val s = socket ?: return
+                val hello = MotoBridgePacket.encodeAudio(ByteArray(0), 0)
+                val pk = MotoBridgePacket.encodeAudio(pickup, pickup.size)
+                try {
+                    s.send(DatagramPacket(hello, hello.size, info.host, info.port))
+                    s.send(DatagramPacket(pk, pk.size, info.host, info.port))
+                    emit("Pickup enviado a ${info.serviceName}")
+                } catch (e: Exception) {
+                    Log.w(TAG, "pickup error: ${e.message}")
+                }
+            }
+        })
     }
 
     private fun resolveAndConnect(info: NsdServiceInfo) {

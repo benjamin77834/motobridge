@@ -38,6 +38,14 @@ final class LocalNetworkTransport: AudioTransport {
     private var isRunning = false
 
     private var discovered: [TransportPeer] = []
+    /// Endpoint Bonjour de cada servicio visto (para conectar a mano al tocar "Conectar").
+    private var endpoints: [String: NWEndpoint] = [:]
+    /// Pickup pendiente de enviar cuando la conexión saliente a ese peer quede lista.
+    private var pendingPickup: [String: Data] = [:]
+    /// Quién nos mandó un pickup hace poco: ya nos escribió él, así que NO abrimos
+    /// una segunda conexión hacia él (evita sesiones duplicadas / audio doble).
+    private var inboundPickups: [String: Date] = [:]
+    private static let pickupHold: TimeInterval = 60
 
     init() {
         let saved = UserDefaults.standard.string(forKey: "riderName")
@@ -63,6 +71,7 @@ final class LocalNetworkTransport: AudioTransport {
         connections.values.forEach { $0.cancel() }
         connections.removeAll()
         discovered.removeAll()
+        endpoints.removeAll(); pendingPickup.removeAll(); inboundPickups.removeAll()
         notifyPeers()
         setState(.notConnected)
         emitEvent("Universal: detenido")
@@ -112,6 +121,10 @@ final class LocalNetworkTransport: AudioTransport {
 
         browser.browseResultsChangedHandler = { [weak self] results, _ in
             guard let self else { return }
+            self.endpoints = [:]
+            for result in results {
+                if case let .service(name, _, _, _) = result.endpoint { self.endpoints[name] = result.endpoint }
+            }
             self.discovered = results.compactMap { result in
                 if case let .service(name, _, _, _) = result.endpoint {
                     return TransportPeer(id: name, name: name)
@@ -126,6 +139,8 @@ final class LocalNetworkTransport: AudioTransport {
                 if case let .service(name, _, _, _) = result.endpoint, name != self.localName {
                     if self.connections[name] != nil { continue }         // ya conectado
                     if self.connections.count >= Self.maxPeers { break }   // grupo lleno
+                    if let t = self.inboundPickups[name],
+                       Date().timeIntervalSince(t) < Self.pickupHold { continue }   // él ya nos escribió
                     if self.localName < name {
                         self.emitEvent("Conectando a \(name)…")
                         self.connect(to: result.endpoint, name: name)
@@ -145,6 +160,25 @@ final class LocalNetworkTransport: AudioTransport {
     }
 
     // MARK: - Conexión
+
+    /// Botón "Conectar" sobre un dispositivo de la lista: abre la conexión (aunque
+    /// la regla de nombre diga que debería esperar) y le manda un pickup. Si ya hay
+    /// conexión lista, solo envía el pickup.
+    func connectManually(toName name: String, pickup: Data) {
+        queue.async { [weak self] in
+            guard let self, self.isRunning, name != self.localName else { return }
+            let framed = MotoBridgePacket.encodeAudio(pickup)
+            if let conn = self.connections[name], conn.state == .ready {
+                conn.send(content: framed, completion: .contentProcessed { _ in })
+                self.emitEvent("Pickup enviado a \(name)")
+                return
+            }
+            guard self.connections[name] == nil, let endpoint = self.endpoints[name] else { return }
+            self.pendingPickup[name] = framed
+            self.emitEvent("Conectando a \(name) (pickup)…")
+            self.connect(to: endpoint, name: name)
+        }
+    }
 
     private func connect(to endpoint: NWEndpoint, name: String) {
         let params = NWParameters.udp
@@ -169,6 +203,10 @@ final class LocalNetworkTransport: AudioTransport {
                 self.emitEvent("✅ Conectado con \(name)")
                 self.notifyPeers()
                 self.receive(on: conn, name: name)
+                if let framed = self.pendingPickup.removeValue(forKey: name) {
+                    conn.send(content: framed, completion: .contentProcessed { _ in })
+                    self.emitEvent("Pickup enviado a \(name)")
+                }
             case .failed(let err):
                 self.emitEvent("Conexión \(name) falló: \(err.localizedDescription)")
                 self.removeConnection(name)
@@ -191,6 +229,7 @@ final class LocalNetworkTransport: AudioTransport {
         conn.receiveMessage { [weak self] data, _, _, error in
             guard let self else { return }
             if let data, let audio = MotoBridgePacket.decodeAudio(data) {
+                if let p = VoiceChannel.parsePickup(audio) { self.inboundPickups[p.sender] = Date() }
                 // El audio de todos los peers se entrega igual; el motor de
                 // audio (AVAudioEngine) mezcla los streams automáticamente.
                 self.onAudioData?(audio)
