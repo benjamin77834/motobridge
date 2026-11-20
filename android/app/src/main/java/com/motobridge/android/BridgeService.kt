@@ -35,8 +35,12 @@ class BridgeService : Service() {
         /** Arranca el servicio en primer plano. */
         fun start(context: Context) {
             val intent = Intent(context, BridgeService::class.java)
-            if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent)
-            else context.startService(intent)
+            try {
+                if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent)
+                else context.startService(intent)
+            } catch (_: Exception) {
+                // Sin servicio el intercom sigue en primer plano; solo pierde el modo pantalla apagada.
+            }
         }
 
         /** Detiene el servicio. */
@@ -57,10 +61,19 @@ class BridgeService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        startForegroundNotification()
+        // Android 14+: startForeground con tipo micrófono lanza SecurityException
+        // / ForegroundServiceStartNotAllowedException si no hay permiso de mic o
+        // si el sistema reinicia el servicio en segundo plano. No debe tumbar la app.
+        try {
+            startForegroundNotification()
+        } catch (e: Exception) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         acquireLocks()
-        // START_STICKY: si el sistema lo mata por memoria, lo reinicia.
-        return START_STICKY
+        // NOT_STICKY: un reinicio automático en segundo plano no puede promover
+        // a foreground con micrófono en Android 14+ y crashearía.
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
@@ -82,7 +95,7 @@ class BridgeService : Service() {
         // Tocar la notificación abre la app.
         val openIntent = packageManager.getLaunchIntentForPackage(packageName)
         val openPending = PendingIntent.getActivity(
-            this, 0, openIntent,
+            this, 0, openIntent ?: Intent(),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         // Acción "Detener" en la propia notificación.
