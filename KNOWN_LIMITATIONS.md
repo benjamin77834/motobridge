@@ -77,3 +77,8 @@ Uso recomendado: Ray-Ban Meta como **salida** (con volumen de escucha subido) + 
 | AirPods | ✅ Sí | mic + altavoz OK (mono/HFP) |
 | FreedConn T-COM VB | ❌ No | solo salida; mic HFP no entrega señal |
 | Ray-Ban Meta | ❌ No | mic reservado a la app de Meta; **salida sí (volumen bajo, subir con ganancia de escucha)** |
+
+## L14 — Límites de red en iOS y Multipeer
+- **RSSI por peer no disponible en iOS:** ni Multipeer ni Network framework exponen la intensidad de señal de cada vecino; la calidad de enlace se mide por la app.
+- **Multipeer Connectivity deprecado en Xcode 27** (aviso de compilación hoy; sin fecha de retiro conocida). Plan de migración en `.kiro/specs/apple-transport-network-framework/`.
+- **Comportamiento en segundo plano sin confirmar:** no se ha probado en dispositivo con pantalla bloqueada; ver `.kiro/specs/link-liveness-heartbeat/`.

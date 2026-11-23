@@ -82,6 +82,15 @@ final class RelaySession: NSObject, ObservableObject {
     private let advertiser: MCNearbyServiceAdvertiser
     private let browser: MCNearbyServiceBrowser
     private let mesh = MeshRelay()
+    /// Capacidades por vecino/origen y contador local de peers legacy (solo log local).
+    private let capabilities = CapabilityTable()
+    private let legacyPeers = LegacyPeerCounter.shared
+    private var presenceOversizeCount = 0
+    private func noteLegacyPeer(_ name: String) {
+        let before = legacyPeers.count
+        legacyPeers.noteLegacy(name: name)
+        if legacyPeers.count != before { slog.info("peers legacy (14 días): \(self.legacyPeers.count)") }
+    }
     /// Peers a los que ya invitamos (para no invitar doble y evitar el cruce
     /// que provoca ForceDisconnect). Se limpia al conectar o perder el peer.
     private var invitedPeers = Set<MCPeerID>()
@@ -238,6 +247,7 @@ final class RelaySession: NSObject, ObservableObject {
             self.universalKeys = keys
             self.universalAliases = self.universalAliases.filter { keys.contains($0.key) }
             self.stateLock.unlock()
+            self.capabilities.retainNeighbors(Set(keys).union(self.session.connectedPeers.map(\.displayName)))
             self.publishUniversalPeers()
         }
         universal.onEvent = { [weak self] line in self?.addEvent("[Universal] " + line) }
@@ -408,7 +418,7 @@ final class RelaySession: NSObject, ObservableObject {
     private func startPresenceTimer() {
         presenceTimer?.invalidate()
         let t = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
-            guard let self, let payload = self.localName.data(using: .utf8) else { return }
+            guard let self, let payload = (self.localName + "\n" + PresenceCodec.capabilityLines(originId: self.mesh.localOriginId)).data(using: .utf8) else { return }
             self.sendUniversal(VoiceChannel.wrap(payload, type: .presence, targetId: 0), keys: nil)
         }
         RunLoop.main.add(t, forMode: .common)
@@ -485,12 +495,12 @@ final class RelaySession: NSObject, ObservableObject {
     /// directo (magic 0x56, lo normal) o envuelto en malla (9 bytes de cabecera).
     private func handleUniversal(_ data: Data, key: String) {
         if data.first == VoiceChannel.magic {
-            handlePayload(data, hops: 0, universalKey: key)
+            handlePayload(data, hops: 0, universalKey: key, neighborId: key)
         } else if let inc = mesh.processIncoming(data), inc.isNew {
             // Desenvuelto para uso local; al lado Multipeer va el paquete de malla
             // con TTL-1 (mismo mecanismo de IDs/TTL que MeshRelay), sin duplicarlo.
             _ = markSeen(inc.payload)
-            handlePayload(inc.payload, hops: inc.hops, universalKey: key, forward: false)
+            handlePayload(inc.payload, hops: inc.hops, universalKey: key, forward: false, neighborId: key)
             let peers = session.connectedPeers
             if let relay = inc.relay, !peers.isEmpty, isControl(inc.payload) {
                 try? session.send(relay, toPeers: peers, with: .reliable)
@@ -580,6 +590,7 @@ extension RelaySession: MCSessionDelegate {
             addEvent("Conectando con \(peerID.displayName)…")
         case .notConnected:
             invitedPeers.remove(peerID)
+            capabilities.removeNeighbor(peerID.displayName)
             addEvent("❌ Desconectado \(peerID.displayName)")
             // No reinvitamos: la Mac solo acepta. El iPhone (que sí busca e
             // invita) volverá a invitar solo cuando nos vea.
@@ -595,7 +606,7 @@ extension RelaySession: MCSessionDelegate {
         // Detectamos por el primer byte: si es 0x56, es directo; si no, es malla.
         let isDirect = (data.first == VoiceChannel.magic)
         if isDirect {
-            handlePayload(data, hops: 0)
+            handlePayload(data, hops: 0, neighborId: peerID.displayName)
             return
         }
         // Envuelto en malla: desenvolver, reproducir y (si procede) relayar.
@@ -604,7 +615,7 @@ extension RelaySession: MCSessionDelegate {
             // saltos (está pegado), aunque el TTL de malla diga otra cosa. Solo
             // usamos los hops de malla si el emisor NO es un peer directo.
             let directHops = session.connectedPeers.contains(peerID) ? 0 : incoming.hops
-            if incoming.isNew { handlePayload(incoming.payload, hops: directHops) }
+            if incoming.isNew { handlePayload(incoming.payload, hops: directHops, neighborId: peerID.displayName) }
             let others = session.connectedPeers.filter { $0 != peerID }
             if let relay = incoming.relay, others.count >= 1, session.connectedPeers.count >= 2 {
                 try? session.send(relay, toPeers: others, with: .unreliable)
@@ -615,7 +626,8 @@ extension RelaySession: MCSessionDelegate {
 
     /// Interpreta el payload de la malla: alimenta el radar con la PRESENCIA y
     /// REPRODUCE el audio de grupo entrante (la Mac ahora es puesto de voz).
-    private func handlePayload(_ data: Data, hops: Int, universalKey: String? = nil, forward: Bool = true) {
+    private func handlePayload(_ data: Data, hops: Int, universalKey: String? = nil, forward: Bool = true,
+                               neighborId: String = "") {
         payloadLogCount += 1
         // Pickup ("X quiere conectarse"): va dirigido a un dispositivo, no se repite
         // entre canales. Los pickups de otros destinatarios se ignoran.
@@ -657,19 +669,22 @@ extension RelaySession: MCSessionDelegate {
         }
         if msg.type == .presence {
             // Primera línea = nombre; líneas ALT=/BAT= = datos del Modo Rescate.
-            guard let text = String(data: msg.audio, encoding: .utf8) else { return }
-            let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
-            guard let first = lines.first, !first.isEmpty else { return }
-            var alt: Double? = nil
-            var bat: Int? = nil
-            for line in lines.dropFirst() {
-                if line.hasPrefix("ALT=") { alt = Double(line.dropFirst(4)) }
-                else if line.hasPrefix("BAT=") { bat = Int(line.dropFirst(4)) }
-            }
-            noteRiderSeen(String(first), hops: hops, altitudeMeters: alt, batteryPercent: bat)
-            if let universalKey {
-                stateLock.lock(); universalAliases[universalKey] = String(first); stateLock.unlock()
-                publishUniversalPeers()
+            // Líneas PV/ID/CAP (spec protocol-capabilities-baseline) se leen con
+            // PresenceCodec; las desconocidas se ignoran.
+            switch PresenceCodec.parse(msg.audio) {
+            case .oversize:
+                presenceOversizeCount += 1
+                return
+            case .invalid:
+                return
+            case .ok(let info):
+                if !neighborId.isEmpty { capabilities.update(neighborId: neighborId, parsed: info, direct: hops == 0) }
+                if info.isLegacy { noteLegacyPeer(info.name) }
+                noteRiderSeen(info.name, hops: hops, altitudeMeters: info.alt, batteryPercent: info.bat)
+                if let universalKey {
+                    stateLock.lock(); universalAliases[universalKey] = info.name; stateLock.unlock()
+                    publishUniversalPeers()
+                }
             }
             return
         }

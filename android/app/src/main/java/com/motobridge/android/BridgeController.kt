@@ -269,24 +269,16 @@ class BridgeController(context: Context) {
         riderSignals = list
     }
 
-    /** Parsea el payload de presencia: primera línea = nombre; líneas ALT=/BAT=
-     *  (opcionales) = datos de Modo Rescate. Compatible con el formato de iOS. */
-    private fun parsePresence(payload: ByteArray): Triple<String, Double?, Int?>? {
-        val text = String(payload, Charsets.UTF_8)
-        val lines = text.split("\n")
-        val name = lines.firstOrNull()?.trim() ?: return null
-        if (name.isBlank()) return null
-        var alt: Double? = null
-        var bat: Int? = null
-        for (line in lines.drop(1)) {
-            when {
-                line.startsWith("ALT=") -> alt = line.removePrefix("ALT=").toDoubleOrNull()
-                line.startsWith("BAT=") -> bat = line.removePrefix("BAT=").toIntOrNull()
-            }
-        }
-        return Triple(name, alt, bat)
-    }
-
+    /** Capacidades por vecino/origen (spec protocol-capabilities-baseline). */
+    val capabilities = com.motobridge.android.net.CapabilityTable()
+    /** Peers legacy (sin PV) vistos en 14 días. Solo local; se muestra en el log. */
+    private val legacyPeers = com.motobridge.android.net.LegacyPeerCounter(
+        initial = prefs.getString("legacyPeerSightings", "").orEmpty().split(";")
+            .mapNotNull { e -> e.lastIndexOf('|').takeIf { it > 0 }?.let { e.substring(0, it) to (e.substring(it + 1).toLongOrNull() ?: return@let null) } }
+            .toMap(),
+        save = { m -> prefs.edit().putString("legacyPeerSightings", m.entries.joinToString(";") { "${it.key.replace(";", "").replace("|", "")}|${it.value}" }).apply() }
+    )
+    private var presenceOversizeCount = 0
     private fun sendPresence() {
         if (!isRunning || localName.isBlank()) return
         var text = localName
@@ -294,6 +286,7 @@ class BridgeController(context: Context) {
             rescueSensors.relativeAltitudeMeters?.let { text += "\nALT=${String.format("%.2f", it)}" }
             currentBatteryPercent()?.let { text += "\nBAT=$it" }
         }
+        text += "\n" + com.motobridge.android.net.PresenceCodec.capabilityLines(mesh.localOriginId)
         val payload = text.toByteArray(Charsets.UTF_8)
         val channeled = com.motobridge.android.net.VoiceChannel.wrap(payload, com.motobridge.android.net.VoiceChannel.PRESENCE, 0)
         val toSend = if (meshEnabled) mesh.wrapOutgoing(channeled) else channeled
@@ -421,6 +414,7 @@ class BridgeController(context: Context) {
                 updateTransmitting(true)
             }
             knownPeers = newSet
+            capabilities.retainNeighbors(newSet)
             peerName = name
             // Radar: sembrar con los peers conectados (verde). El presence refina saltos.
             for (r in newSet) noteRiderSeen(r, 0)
@@ -436,8 +430,21 @@ class BridgeController(context: Context) {
         if (msg == null) { audio.playFrom(peerId, data); return }
         if (msg.type == com.motobridge.android.net.VoiceChannel.PRESENCE) {
             // Primera línea = nombre; en Modo Rescate trae ALT=/BAT= extra.
-            val info = parsePresence(msg.audio)
-            if (info != null) noteRiderSeen(info.first, hops, info.second, info.third)
+            when (val r = com.motobridge.android.net.PresenceCodec.parse(msg.audio)) {
+                is com.motobridge.android.net.PresenceCodec.Result.Ok -> {
+                    val info = r.parsed
+                    capabilities.update(peerId, info, direct = hops == 0)
+                    if (info.isLegacy) {
+                        val before = legacyPeers.count()
+                        legacyPeers.noteLegacy(info.name)
+                        val after = legacyPeers.count()
+                        if (after != before) android.util.Log.i("BridgeController", "peers legacy (14 días): $after")
+                    }
+                    noteRiderSeen(info.name, hops, info.alt, info.bat)
+                }
+                is com.motobridge.android.net.PresenceCodec.Result.Oversize -> presenceOversizeCount++
+                else -> {}
+            }
             return
         }
         when (msg.type) {

@@ -499,6 +499,7 @@ private fun MainControls(controller: BridgeController, onSettings: () -> Unit) {
 @Composable
 private fun SettingsControls(controller: BridgeController) {
     var nameField by remember { mutableStateOf(controller.riderName) }
+    HotspotGuideCard()
 
     // Nombre del rider
     Card(Modifier.fillMaxWidth()) {

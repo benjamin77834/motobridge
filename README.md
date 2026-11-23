@@ -24,6 +24,7 @@ Para desarrollo local, abre `web/index.html` en el navegador.
 
 ## Características
 - Voz en vivo por red local (WiFi/hotspot)
+- Guía "Maximizar compatibilidad (hotspot)": iOS (menú ⋯ de la pantalla del bridge), Android (Configuración) y Mac Relay (ventana principal)
 - Grupo multi-rider
 - Canal privado (susurro 1 a 1)
 - Botón de emergencia

@@ -12,7 +12,8 @@ enum PeerConnectionState: String {
 /// Puente de red local entre dos dispositivos usando MultipeerConnectivity.
 ///
 /// MultipeerConnectivity elige automáticamente el mejor transporte disponible
-/// (WiFi de infraestructura, WiFi peer-to-peer directo, o Bluetooth), así que
+/// (WiFi de infraestructura o WiFi peer-to-peer directo; en los sistemas actuales
+/// ya no usa Bluetooth), así que
 /// funciona en el mismo WiFi, en un hotspot, o incluso sin ninguna red — sin
 /// que el usuario configure nada.
 ///
@@ -118,7 +119,7 @@ final class PeerBridgeSession: NSObject, ObservableObject {
     }
 
     /// Se invoca en un hilo de fondo cuando llegan datos de audio.
-    var onAudioData: ((Data) -> Void)?
+    var onAudioData: ((Data, String) -> Void)?
 
     // Callbacks de AudioTransport (opcionales; la UI también puede leer los @Published).
     var onStateChange: ((TransportState) -> Void)?
@@ -253,11 +254,8 @@ final class PeerBridgeSession: NSObject, ObservableObject {
 
     /// Envía datos de audio a los peers conectados.
     ///
-    /// Usamos modo `.reliable`: aunque en teoría `.unreliable` da menos latencia,
-    /// en la práctica sus canales UDP tardan en establecerse y provocan errores
-    /// "Not in connected state, giving up on channel" justo tras conectar. El modo
-    /// reliable usa el canal ya establecido y es estable. Para bloques de voz
-    /// pequeños la diferencia de latencia es mínima.
+    /// El audio se envía con `.unreliable` (ver el cuerpo): un paquete tardío o
+    /// perdido se descarta, no se reintenta.
     func sendAudio(_ data: Data) {
         let peers = session.connectedPeers
         guard !peers.isEmpty else { return }
@@ -316,7 +314,7 @@ extension PeerBridgeSession: MCSessionDelegate {
 
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
         // Llega en hilo de fondo; lo pasamos directo al reproductor de audio.
-        onAudioData?(data)
+        onAudioData?(data, peerID.displayName)
     }
 
     func session(_ session: MCSession, didReceive stream: InputStream, withName streamName: String, fromPeer peerID: MCPeerID) {}

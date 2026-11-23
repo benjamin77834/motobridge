@@ -47,6 +47,18 @@ struct RelayView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
 
+            DisclosureGroup(HotspotGuideContent.entryTitle) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(HotspotGuideContent.intro).font(.callout)
+                    ForEach(HotspotGuideContent.sections) { section in
+                        Text(section.title).font(.subheadline.weight(.semibold)).padding(.top, 4)
+                        ForEach(Array(section.steps.enumerated()), id: \.offset) { _, step in
+                            Text("• " + step).font(.callout).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
             Button {
                 relay.toggle()
             } label: {

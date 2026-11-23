@@ -4,4 +4,26 @@
     <string name="sc_stop">Detener bridge</string>
     <string name="sc_mic_on">Activar micrófono</string>
     <string name="sc_mic_off">Silenciar micrófono</string>
+    <!-- Guía "Maximizar compatibilidad (hotspot)". Un solo archivo de texto por plataforma.
+         Notas para el equipo (no se muestran al rider): que la opción de iPhone fuerce 2,4 GHz
+         lo dice la comunidad de Apple, no el soporte oficial. No prometer alcance ni cifras.
+         Pasos de Samsung One UI SIN validar en un S25 todavía (spec hotspot-rider-guide, tarea 2.1);
+         anotar aquí fecha y versión al validarlos. Revisar al cambiar el Android objetivo. -->
+    <string name="hotspot_title">Maximizar compatibilidad (hotspot)</string>
+    <string name="hotspot_intro">Si usas el hotspot de un rider para conectar a todos, estos pasos ayudan a que la red sea más estable.</string>
+    <string name="hotspot_iphone_title">Hotspot de iPhone</string>
+    <string name="hotspot_iphone_1">Abre Ajustes y entra a Punto de acceso personal.</string>
+    <string name="hotspot_iphone_2">Activa el interruptor \"Maximizar compatibilidad\". Está disponible en iPhone 12 o posterior.</string>
+    <string name="hotspot_iphone_3">Hazlo si algún dispositivo no ve la red o la conexión se corta.</string>
+    <string name="hotspot_iphone_4">Esta opción usa la banda de 2,4 GHz, que suele llegar más lejos pero es más lenta y más sensible a interferencias.</string>
+    <string name="hotspot_android_title">Hotspot de Android (Samsung One UI)</string>
+    <string name="hotspot_android_1">Abre Ajustes, Conexiones, Punto de acceso móvil y anclaje.</string>
+    <string name="hotspot_android_2">Entra a Punto de acceso móvil y toca Configurar.</string>
+    <string name="hotspot_android_3">En Banda, elige 2,4 GHz y guarda.</string>
+    <string name="hotspot_android_4">En otros fabricantes los nombres pueden variar: busca la configuración del punto de acceso y elige la banda de 2,4 GHz.</string>
+    <string name="hotspot_noaudio_title">Si se ven pero no hay audio</string>
+    <string name="hotspot_noaudio_1">Algunos hotspots impiden que los dispositivos se comuniquen entre sí (aislamiento de clientes). Prueba con el hotspot de otro rider o usa la conexión directa entre iPhones.</string>
+    <string name="hotspot_noaudio_2">Para incluir a Android y Mac, todos deben estar en la misma red Wi-Fi o hotspot.</string>
+    <string name="hotspot_range_title">Alcance</string>
+    <string name="hotspot_range_1">El alcance depende de obstáculos, interferencias y de los dispositivos. No se promete ningún alcance concreto.</string>
 </resources>

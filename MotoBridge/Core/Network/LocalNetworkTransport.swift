@@ -17,7 +17,7 @@ final class LocalNetworkTransport: AudioTransport {
 
     var onStateChange: ((TransportState) -> Void)?
     var onPeersChange: ((_ discovered: [TransportPeer], _ connected: [TransportPeer]) -> Void)?
-    var onAudioData: ((Data) -> Void)?
+    var onAudioData: ((Data, String) -> Void)?
     var onEvent: ((String) -> Void)?
 
     /// Tipo de servicio Bonjour (debe coincidir con la app Android).
@@ -232,7 +232,7 @@ final class LocalNetworkTransport: AudioTransport {
                 if let p = VoiceChannel.parsePickup(audio) { self.inboundPickups[p.sender] = Date() }
                 // El audio de todos los peers se entrega igual; el motor de
                 // audio (AVAudioEngine) mezcla los streams automáticamente.
-                self.onAudioData?(audio)
+                self.onAudioData?(audio, name)
             }
             if error == nil, self.connections[name] != nil {
                 self.receive(on: conn, name: name)

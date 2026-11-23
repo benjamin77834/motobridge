@@ -27,7 +27,7 @@ enum TransportMode: String, CaseIterable, Identifiable {
     var explanation: String {
         switch self {
         case .apple:
-            return "Solo entre dispositivos Apple (WiFi directo/Bluetooth). Úsalo si quieres forzar este canal."
+            return "Solo entre dispositivos Apple (WiFi directo). Úsalo si quieres forzar este canal."
         case .universal:
             return "Solo por red local (iPhone↔Android o iPhone↔iPhone). Todos en la misma WiFi/hotspot."
         case .gateway:
@@ -58,7 +58,8 @@ protocol AudioTransport: AnyObject {
     /// Callbacks. El transporte los invoca; el controlador los implementa.
     var onStateChange: ((TransportState) -> Void)? { get set }
     var onPeersChange: ((_ discovered: [TransportPeer], _ connected: [TransportPeer]) -> Void)? { get set }
-    var onAudioData: ((Data) -> Void)? { get set }
+    /// Segundo argumento: id del vecino directo por el que llegó (`TransportPeer.id`).
+    var onAudioData: ((Data, String) -> Void)? { get set }
     var onEvent: ((String) -> Void)? { get set }
 
     /// Nombre de este dispositivo (para diagnóstico).

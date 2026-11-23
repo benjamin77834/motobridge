@@ -797,28 +797,19 @@ final class NetworkBridgeController: ObservableObject {
         }
     }
 
-    /// Parsea el payload de presencia: primera línea = nombre; líneas ALT=/BAT=
-    /// (opcionales) = datos de Modo Rescate.
-    private func parsePresence(_ payload: Data) -> (name: String, alt: Double?, bat: Int?)? {
-        guard let text = String(data: payload, encoding: .utf8) else { return nil }
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
-        guard let first = lines.first else { return nil }
-        let name = String(first)
-        guard !name.isEmpty else { return nil }
-        var alt: Double? = nil
-        var bat: Int? = nil
-        for line in lines.dropFirst() {
-            if line.hasPrefix("ALT=") { alt = Double(line.dropFirst(4)) }
-            else if line.hasPrefix("BAT=") { bat = Int(line.dropFirst(4)) }
-        }
-        return (name, alt, bat)
+    /// Capacidades por vecino/origen (spec protocol-capabilities-baseline). Los ids de
+    /// vecino del transporte Android/WiFi llevan prefijo "g:" para no chocar con Multipeer.
+    let capabilities = CapabilityTable()
+    private var primaryNeighborIds = Set<String>()
+    private var gatewayNeighborIds = Set<String>()
+    private var presenceOversizeCount = 0
+    private func syncNeighbors() {
+        capabilities.retainNeighbors(primaryNeighborIds.union(gatewayNeighborIds))
     }
-
     /// Emite un latido de presencia para que el radar de los demás nos vea.
-    /// Payload normal: solo el nombre (compatible con versiones viejas y Android).
-    /// En Modo Rescate se añaden líneas extra con altura barométrica y batería:
-    ///   "<nombre>\nALT=<metros>\nBAT=<porcentaje>"
-    /// La primera línea sigue siendo el nombre, así los lectores viejos no se rompen.
+    /// Payload: "<nombre>[\nALT=<m>\nBAT=<%>]\nPV=2\nID=<8 hex>\nCAP=<tokens>".
+    /// ALT/BAT solo en Modo Rescate. La primera línea sigue siendo el nombre, así
+    /// los lectores viejos ignoran PV/ID/CAP y no se rompen.
     private func sendPresence() {
         guard isRunning, !localName.isEmpty else { return }
         var text = localName
@@ -830,6 +821,7 @@ final class NetworkBridgeController: ObservableObject {
                 text += "\nBAT=\(bat)"
             }
         }
+        text += "\n" + PresenceCodec.capabilityLines(originId: mesh.localOriginId)
         guard let payload = text.data(using: .utf8) else { return }
         let channeled = VoiceChannel.wrap(payload, type: .presence, targetId: 0)
         let toSend = meshEnabled ? mesh.wrapOutgoing(channeled) : channeled
@@ -1071,18 +1063,18 @@ final class NetworkBridgeController: ObservableObject {
     private func wireTransport(_ t: AudioTransport) {
         localName = t.localName
 
-        t.onAudioData = { [weak self] data in
+        t.onAudioData = { [weak self] data, neighborId in
             guard let self else { return }
             if self.meshEnabled {
                 guard let incoming = self.mesh.processIncoming(data) else { return }
                 if incoming.isNew {
-                    self.playChanneled(incoming.payload, hops: incoming.hops)
+                    self.playChanneled(incoming.payload, hops: incoming.hops, neighborId: neighborId)
                 }
                 if let relay = incoming.relay, self.connectedPeers.count > 1 {
                     self.transport.sendAudio(relay)
                 }
             } else {
-                self.playChanneled(data, hops: 0)   // sin mesh = conexión directa
+                self.playChanneled(data, hops: 0, neighborId: neighborId)   // sin mesh = conexión directa
             }
             // En modo puente, reenviar al lado Android lo que llega de los iPhones.
             if !Self.isPickup(data) { self.gatewayTransport?.sendAudio(data) }
@@ -1106,6 +1098,8 @@ final class NetworkBridgeController: ObservableObject {
                     self.setTransmitting(true)
                 }
                 self.knownPeerNames = newNames
+                self.primaryNeighborIds = Set(connected.map { $0.id })
+                self.syncNeighbors()
                 self.discoveredPeers = discovered
                 self.connectedPeers = connected
                 // Conteo del canal principal para resaltar el canal activo. En
@@ -1134,15 +1128,16 @@ final class NetworkBridgeController: ObservableObject {
     /// por aquí (del Android/WiFi) se reproduce localmente Y se reenvía por el
     /// transporte principal (Multipeer) para que los iPhones lo oigan.
     private func wireGatewayTransport(_ t: AudioTransport) {
-        t.onAudioData = { [weak self] data in
+        t.onAudioData = { [weak self] data, rawNeighborId in
             guard let self else { return }
+            let neighborId = "g:" + rawNeighborId
             // Reproducir localmente lo que viene del Android.
             if self.meshEnabled {
                 if let incoming = self.mesh.processIncoming(data) {
-                    if incoming.isNew { self.playChanneled(incoming.payload, hops: incoming.hops) }
+                    if incoming.isNew { self.playChanneled(incoming.payload, hops: incoming.hops, neighborId: neighborId) }
                 }
             } else {
-                self.playChanneled(data, hops: 0)
+                self.playChanneled(data, hops: 0, neighborId: neighborId)
             }
             // Reenviar al lado Apple (Multipeer) para que los iPhones lo oigan.
             if !Self.isPickup(data) { self.transport.sendAudio(data) }
@@ -1159,6 +1154,8 @@ final class NetworkBridgeController: ObservableObject {
                 guard let self else { return }
                 // Conteo del canal Universal (WiFi) en modo Auto, para resaltarlo.
                 self.universalPeerCount = connected.count
+                self.gatewayNeighborIds = Set(connected.map { "g:" + $0.id })
+                self.syncNeighbors()
                 // Sembrar el radar con los riders conectados por el canal WiFi.
                 for peer in connected { self.noteRiderSeen(peer.name, hops: 0) }
             }
@@ -1170,7 +1167,7 @@ final class NetworkBridgeController: ObservableObject {
     /// - grupo: siempre.
     /// - privado: solo si soy el destinatario (modo b: sigo oyendo al grupo).
     /// - alarma: siempre, con prioridad (aviso por voz).
-    private func playChanneled(_ data: Data, hops: Int = 0) {
+    private func playChanneled(_ data: Data, hops: Int = 0, neighborId: String = "") {
         guard let msg = VoiceChannel.unwrap(data) else {
             // Compatibilidad: si no trae cabecera de canal, tratar como grupo.
             audioIO.playReceivedAudio(data)
@@ -1180,9 +1177,18 @@ final class NetworkBridgeController: ObservableObject {
         case .presence:
             // Latido de otro rider para el radar. Primera línea = nombre; en
             // Modo Rescate trae también altura barométrica y batería.
-            if let info = parsePresence(msg.audio) {
+            switch PresenceCodec.parse(msg.audio) {
+            case .ok(let info):
+                if !neighborId.isEmpty {
+                    capabilities.update(neighborId: neighborId, parsed: info, direct: hops == 0)
+                }
+                if info.isLegacy { LegacyPeerCounter.shared.noteLegacy(name: info.name) }
                 noteRiderSeen(info.name, hops: hops,
                               altitudeMeters: info.alt, batteryPercent: info.bat)
+            case .oversize:
+                presenceOversizeCount += 1
+            case .invalid:
+                break
             }
             return
         case .group:

@@ -52,6 +52,9 @@ struct AudioDiagnosticsView: View {
                 infoRow("Última interrupción", audioSession.lastInterruption)
             }
 
+            Section("Compatibilidad de red") {
+                infoRow("Peers legacy (14 días)", "\(LegacyPeerCounter.shared.count)")
+            }
             Section("Diagnóstico") {
                 Button("Exportar diagnóstico") {
                     if let url = logger.exportToFile() {

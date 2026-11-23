@@ -16,6 +16,7 @@
 		2E10B7482E88FAB1E3158A7B /* AudioBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707A2E8A53190514E043717E /* AudioBridge.swift */; };
 		2F621B630907BABCDB0B2374 /* RelaySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0830C76A43C6EA7F180FE856 /* RelaySession.swift */; };
 		2F8AB49CA8FC2F34725AD4B1 /* OpusCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC21EBD18C639E527A56D797 /* OpusCodec.swift */; };
+		355B3034534947CEC2CB0E24 /* HotspotGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B64F83AF419B8308560DDCB /* HotspotGuideView.swift */; };
 		402DEBD572A183B00DABA53A /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55BF19FCFE50A747E7C04C5B /* AudioSessionManager.swift */; };
 		4139839F9CA39BFF4CE9B3A5 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E0A81559B8E2835AE5F780 /* SettingsView.swift */; };
 		457B287847424C27A805D7E4 /* AudioCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2826E967233D3C971337E9F8 /* AudioCodec.swift */; };
@@ -25,7 +26,9 @@
 		6465A038E45ADED840FB9BB1 /* RescueSensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF9580AA4ADF0354C618C0C /* RescueSensors.swift */; };
 		663A38D6D9F86591AD0619D2 /* RelayApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5830CE4282DEA1D89F851A0E /* RelayApp.swift */; };
 		6876A29CC800732D3C61530B /* TrailSparkline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75E19ACCE648FF970E174DC5 /* TrailSparkline.swift */; };
+		69FEC27F72BEA16F9EDAED80 /* PeerCapabilitiesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC681D53281EF827A1BECF2C /* PeerCapabilitiesTests.swift */; };
 		6EA3F4C9BE04F70D8039C707 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00398E2CF63EB430C40CA29 /* DashboardView.swift */; };
+		6F3077C53DE6EE1BFAE85F0B /* PeerCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA818FD4C3ED59E4327853E0 /* PeerCapabilities.swift */; };
 		72F5D40344BE88A28FBC6356 /* MotoBridgeIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF01898A30F24B8F72F05CF7 /* MotoBridgeIntents.swift */; };
 		7A2337F6902A973C7659606D /* RemoteControlManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59ADA87FF916BF8D514DE639 /* RemoteControlManager.swift */; };
 		7D24130E22540C70E52D7195 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C5059A7A9A5DD05947BACC5 /* Assets.xcassets */; };
@@ -37,6 +40,7 @@
 		A5368E58837BF2A32D982652 /* NetworkBridgeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */; };
 		A8BF4C9B3F31E1637E9B5FE5 /* VoiceEnhancer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC83DDBF5548389BC949696 /* VoiceEnhancer.swift */; };
 		B1A3C275B88ED8EF5CF3783D /* AudioBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106FAF4B343CB07D8D4C874A /* AudioBridgeTests.swift */; };
+		B570DC84322DDFFC6B7B789E /* PeerCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA818FD4C3ED59E4327853E0 /* PeerCapabilities.swift */; };
 		B92E5E72E331404C242E96F6 /* AudioTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47FAFD435FA35518B85EB99B /* AudioTransport.swift */; };
 		BB3AB2390E656EF8DC3239DE /* MeshRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */; };
 		C05F1887ED16D7E685C51B6E /* CallKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E30CBE0D99AAA8BB74D3E37 /* CallKitManager.swift */; };
@@ -47,6 +51,8 @@
 		EB24E461E93390F52E50FBB3 /* NetworkBridgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77EDDAC5C8DBFCF68787123D /* NetworkBridgeView.swift */; };
 		F10C05F658292D4F36E50017 /* MotoBridgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07ECC8C3E436BEB17E9E4788 /* MotoBridgeApp.swift */; };
 		FAD8692B4B16EE3182DA3F2C /* AudioCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2826E967233D3C971337E9F8 /* AudioCodec.swift */; };
+		FAE98409472D909B303D5316 /* HotspotGuideContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80AB55036F3E549ABA10A4D7 /* HotspotGuideContent.swift */; };
+		FB14338B162A4DCD94C84979 /* HotspotGuideContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80AB55036F3E549ABA10A4D7 /* HotspotGuideContent.swift */; };
 		FCD46F9BE95DF232B985586B /* IntercomDevices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C359167A3F55301A01A436B /* IntercomDevices.swift */; };
 		FD2DCFEED3E9401F9ACB26C0 /* AudioDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD17445A42748BADDC08595 /* AudioDiagnosticsView.swift */; };
 /* End PBXBuildFile section */
@@ -77,6 +83,7 @@
 		2826E967233D3C971337E9F8 /* AudioCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCodec.swift; sourceTree = "<group>"; };
 		288B6115B720CFEF4733A7CD /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		2ADA7F7E767C932537748638 /* MotoBridge.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MotoBridge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2B64F83AF419B8308560DDCB /* HotspotGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotspotGuideView.swift; sourceTree = "<group>"; };
 		3D87CB699F2B1EF3A72E7B0C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3DFB6FCF0D1AE67FB56C4653 /* IntercomDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntercomDevice.swift; sourceTree = "<group>"; };
 		47FAFD435FA35518B85EB99B /* AudioTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTransport.swift; sourceTree = "<group>"; };
@@ -93,6 +100,7 @@
 		75E19ACCE648FF970E174DC5 /* TrailSparkline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrailSparkline.swift; sourceTree = "<group>"; };
 		77EDDAC5C8DBFCF68787123D /* NetworkBridgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeView.swift; sourceTree = "<group>"; };
 		8007F93A7156DE233E818E56 /* RelayAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayAudio.swift; sourceTree = "<group>"; };
+		80AB55036F3E549ABA10A4D7 /* HotspotGuideContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotspotGuideContent.swift; sourceTree = "<group>"; };
 		80CF211F3BDA6713A45C7216 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeController.swift; sourceTree = "<group>"; };
 		9B9011F11E0CA9A2AF51AD37 /* UniversalTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalTransport.swift; sourceTree = "<group>"; };
@@ -103,6 +111,8 @@
 		D00398E2CF63EB430C40CA29 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		D73608A31D00D54C0275CF7A /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
 		DC21EBD18C639E527A56D797 /* OpusCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCodec.swift; sourceTree = "<group>"; };
+		DC681D53281EF827A1BECF2C /* PeerCapabilitiesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerCapabilitiesTests.swift; sourceTree = "<group>"; };
+		EA818FD4C3ED59E4327853E0 /* PeerCapabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerCapabilities.swift; sourceTree = "<group>"; };
 		FC10E228F756A59AB17CCE5A /* RadarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarView.swift; sourceTree = "<group>"; };
 		FFD17445A42748BADDC08595 /* AudioDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDiagnosticsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -139,6 +149,7 @@
 			isa = PBXGroup;
 			children = (
 				106FAF4B343CB07D8D4C874A /* AudioBridgeTests.swift */,
+				DC681D53281EF827A1BECF2C /* PeerCapabilitiesTests.swift */,
 			);
 			path = MotoBridgeTests;
 			sourceTree = "<group>";
@@ -239,9 +250,11 @@
 			isa = PBXGroup;
 			children = (
 				47FAFD435FA35518B85EB99B /* AudioTransport.swift */,
+				80AB55036F3E549ABA10A4D7 /* HotspotGuideContent.swift */,
 				1F58EC3B8B3DA3607714FBB1 /* LocalNetworkTransport.swift */,
 				236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */,
 				168F2607A0C6C75F9A54514A /* PeerBridgeSession.swift */,
+				EA818FD4C3ED59E4327853E0 /* PeerCapabilities.swift */,
 				6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */,
 			);
 			path = Network;
@@ -289,6 +302,7 @@
 			children = (
 				1D1920C7A0CC1188A48D98FF /* Dashboard */,
 				9887B7AE10B22D17F9299C01 /* Diagnostics */,
+				D3B73D4188F42B9F2DB11A75 /* Help */,
 				205E89142CAFD017B3080740 /* PushToTalk */,
 				AB4E572015EF8CAE87783377 /* Settings */,
 			);
@@ -301,6 +315,14 @@
 				06E0A81559B8E2835AE5F780 /* SettingsView.swift */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		D3B73D4188F42B9F2DB11A75 /* Help */ = {
+			isa = PBXGroup;
+			children = (
+				2B64F83AF419B8308560DDCB /* HotspotGuideView.swift */,
+			);
+			path = Help;
 			sourceTree = "<group>";
 		};
 		E32BB35BFBE756096487C1A1 /* Watch */ = {
@@ -476,6 +498,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1A3C275B88ED8EF5CF3783D /* AudioBridgeTests.swift in Sources */,
+				69FEC27F72BEA16F9EDAED80 /* PeerCapabilitiesTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -492,6 +515,8 @@
 				B92E5E72E331404C242E96F6 /* AudioTransport.swift in Sources */,
 				C05F1887ED16D7E685C51B6E /* CallKitManager.swift in Sources */,
 				6EA3F4C9BE04F70D8039C707 /* DashboardView.swift in Sources */,
+				FB14338B162A4DCD94C84979 /* HotspotGuideContent.swift in Sources */,
+				355B3034534947CEC2CB0E24 /* HotspotGuideView.swift in Sources */,
 				89DB8051D90B9BB7AA5A6478 /* IntercomDevice.swift in Sources */,
 				FCD46F9BE95DF232B985586B /* IntercomDevices.swift in Sources */,
 				551D13D3C201F1815B6D078F /* LocalNetworkTransport.swift in Sources */,
@@ -503,6 +528,7 @@
 				EB24E461E93390F52E50FBB3 /* NetworkBridgeView.swift in Sources */,
 				2F8AB49CA8FC2F34725AD4B1 /* OpusCodec.swift in Sources */,
 				5B6E1981AF6CDC100004C22B /* PeerBridgeSession.swift in Sources */,
+				6F3077C53DE6EE1BFAE85F0B /* PeerCapabilities.swift in Sources */,
 				7A2337F6902A973C7659606D /* RemoteControlManager.swift in Sources */,
 				EA51AE31C72DDE13E7EF74B4 /* RescueCard.swift in Sources */,
 				6465A038E45ADED840FB9BB1 /* RescueSensors.swift in Sources */,
@@ -518,7 +544,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				457B287847424C27A805D7E4 /* AudioCodec.swift in Sources */,
+				FAE98409472D909B303D5316 /* HotspotGuideContent.swift in Sources */,
 				17CCAA91008E77F3494A1CA1 /* MeshRelay.swift in Sources */,
+				B570DC84322DDFFC6B7B789E /* PeerCapabilities.swift in Sources */,
 				97EF3F195FB248C10A7B31E7 /* RadarView.swift in Sources */,
 				663A38D6D9F86591AD0619D2 /* RelayApp.swift in Sources */,
 				05E47515E99D85A42D3912F3 /* RelayAudio.swift in Sources */,

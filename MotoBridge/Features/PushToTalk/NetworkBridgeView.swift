@@ -92,6 +92,11 @@ struct NetworkBridgeView: View {
                         Label("Audio Diagnostics", systemImage: "waveform")
                     }
                     NavigationLink {
+                        HotspotGuideView()
+                    } label: {
+                        Label(HotspotGuideContent.entryTitle, systemImage: "wifi")
+                    }
+                    NavigationLink {
                         SettingsView()
                     } label: {
                         Label("Settings", systemImage: "gearshape")

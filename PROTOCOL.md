@@ -59,13 +59,16 @@ Offset  Tamaño  Campo         Valor
 1       1       version       0x01
 2       1       type          0x01  (audio PCM)
 3       1       reserved      0x00
-4..N    var     payload       PCM Int16 little-endian, mono, 8 kHz
+4..N    var     payload       byte de códec + datos de audio a 16 kHz (ver abajo)
 ```
 
 - **magic**: siempre `0x4D`. Los paquetes que no empiecen con este byte se descartan.
 - **version**: `0x01` en esta versión del protocolo.
 - **type**: `0x01` = audio. (Reservado para futuros tipos: control, ping, etc.)
-- **payload**: muestras PCM de 16 bits con signo, **little-endian**, un canal (mono), a **8000 Hz**.
+- **payload**: primer byte = códec (`0x00` PCM, `0x01` Opus); el resto son los datos de audio mono a **16 kHz** (PCM Int16 little-endian u Opus).
+- **Cabecera de malla (9 bytes, opcional):** si la malla está activa, el datagrama lleva antes del payload `originId`(4) + `packetId`(4) + `ttl`(1), big-endian. Un paquete que empieza con el magic de canal `0x56` no la lleva.
+- **Tipos de canal (`VoiceChannel`, 0 a 7):** 0 grupo, 1 privado, 2 alarma, 3 texto, 4 subgrupo, 5 presencia, 6 ack, 7 pickup. Un tipo desconocido lo reproducen las apps viejas como audio crudo (clic): no crear tipos nuevos sin comprobarlo.
+- **Servicio Bonjour:** `_motobridge._udp`.
 
 ### Tamaño de bloque recomendado
 - Bloques de ~20–128 ms de audio (p. ej. 160–1024 muestras). Bloques pequeños = menor latencia.
@@ -73,7 +76,7 @@ Offset  Tamaño  Campo         Valor
 ### Decodificación
 Un receptor válido:
 1. Verifica `packet.length > 4`, `packet[0] == 0x4D`, `packet[2] == 0x01`.
-2. Extrae `payload = packet[4..]` como PCM Int16 LE mono 8 kHz y lo reproduce.
+2. Extrae `payload = packet[4..]`, lee el byte de códec y reproduce el audio a 16 kHz.
 
 ---
 
@@ -81,16 +84,16 @@ Un receptor válido:
 
 | Parámetro | Valor |
 |---|---|
-| Codec | PCM lineal sin comprimir |
+| Codec | PCM lineal (`0x00`) u Opus (`0x01`), indicado por el primer byte del payload |
 | Profundidad | 16 bits con signo (Int16) |
 | Endianness | Little-endian |
 | Canales | 1 (mono) |
-| Sample rate | 8000 Hz |
+| Sample rate | 16000 Hz |
 
-> 8 kHz coincide con el sample rate de HFP (intercoms/AirPods), evitando reconversión. Si en el futuro se sube la calidad, incrementar `version` y negociar.
+> Nota: versiones anteriores de este documento decían 8 kHz; el código usa 16 kHz. Todo cambio de formato futuro se anuncia por capacidad (`CAP`, abajo).
 
 ### Android — captura y reproducción
-- **Captura:** `AudioRecord` con `MediaRecorder.AudioSource.VOICE_COMMUNICATION` (activa AEC/NS del sistema), `SAMPLE_RATE = 8000`, `CHANNEL_IN_MONO`, `ENCODING_PCM_16BIT`.
+- **Captura:** `AudioRecord` con `MediaRecorder.AudioSource.VOICE_COMMUNICATION` (activa AEC/NS del sistema), `SAMPLE_RATE = 16000`, `CHANNEL_IN_MONO`, `ENCODING_PCM_16BIT`.
 - **Reproducción:** `AudioTrack` con `STREAM_VOICE_CALL` o `AudioAttributes` de comunicación, mismos parámetros.
 - **Eco:** habilitar `AcousticEchoCanceler` y `NoiseSuppressor` sobre el `AudioRecord.audioSessionId` si el dispositivo los soporta.
 
@@ -102,7 +105,7 @@ Un receptor válido:
 2. **Descubierto un peer** con nombre distinto → aplicar regla §3.
 3. **Conexión UDP** establecida → empezar a enviar/recibir datagramas de audio.
 4. **Push-to-talk:** solo se envían datagramas mientras el usuario transmite (o micrófono abierto).
-5. **Desconexión:** si no llegan paquetes en ~5 s o la conexión falla, volver a descubrimiento y reconectar (regla §3).
+5. **Desconexión:** Android y Mac quitan un peer sin tráfico en 30 s; el radar de iOS marca perdido a un rider tras 7 s sin presencia (8 s en el radar de Mac). Si la conexión falla, volver a descubrimiento y reconectar (regla §3).
 6. **Stop:** cancelar listener, browser y conexión.
 
 ---
@@ -120,8 +123,8 @@ Un receptor válido:
 - [ ] Publicar y descubrir `_motobridge._udp` con `NsdManager`.
 - [ ] Regla de conexión por nombre (§3).
 - [ ] Socket UDP (`DatagramSocket`) enviando/recibiendo datagramas con la cabecera §4.
-- [ ] Captura `AudioRecord` 8 kHz mono Int16 + AEC/NS.
-- [ ] Reproducción `AudioTrack` 8 kHz mono Int16.
+- [ ] Captura `AudioRecord` 16 kHz mono Int16 + AEC/NS.
+- [ ] Reproducción `AudioTrack` 16 kHz mono Int16.
 - [ ] Push-to-talk y ganancias (opcional, equivalentes a la app iOS).
 - [ ] Permisos: `RECORD_AUDIO`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE` (para mDNS), `INTERNET`.
 
@@ -153,3 +156,18 @@ Al recibirlo (si `targetId` es 0 o el propio):
 **Retrocompatibilidad:** una app que no conoce el tipo `0x07` no lo reconoce como canal (`unwrap` devuelve nil/null) y lo trata como audio crudo de grupo: son ~10-30 bytes, un clic imperceptible de pocos ms, sin fallo ni cierre de conexión. En Multipeer viaja en el contexto de invitación, que las apps viejas no leen.
 
 **Timbre de conexión:** no es un paquete. Cada app lo genera localmente (2 notas ascendentes, Mi5→Si5, con envolvente, ~0.8 s, volumen ~0.3) cuando **ya había gente conectada** y se conecta alguien nuevo. Se sintetiza por código (sin assets) y sale por la ruta de audio activa sin abrir el micrófono ni cambiar la sesión.
+
+## 10. Presencia, versión y capacidades (protocolo 2)
+La presencia (tipo de canal 5) se emite cada 2 s. Payload UTF-8 separado por `\n`:
+```
+<nombre>            primera línea, sin cambios
+ALT=<metros>        opcional (Modo Rescate)
+BAT=<porcentaje>    opcional (Modo Rescate)
+PV=<entero>         versión de protocolo; 2 desde esta build. Sin PV = protocolo 1 (legacy)
+ID=<8 hex>          originId de malla del nodo (aleatorio por sesión)
+CAP=<tokens>        capacidades separadas por coma (vacío por ahora; TEST solo en depuración iOS)
+```
+Reglas: una línea o token desconocido se ignora; un `PV` no numérico cuenta como ausente; un payload de más de 512 bytes se descarta y se cuenta. Tokens reservados: `HB`, `SEQ`, `OPUS`, `SR`, `DP`, `ENC`. **Verificado en esta fase:** los parsers de iOS, Android y Mac Relay toman el nombre de la primera línea e ignoran el resto, con pruebas automáticas en iOS y Android (vectores en `.kiro/specs/protocol-capabilities-baseline/vectors/presence-vectors.txt`); en Mac Relay no hay target de pruebas y se verificó por revisión de código y compilación.
+
+## 11. Retiro de la compatibilidad con peers legacy
+Cada app cuenta localmente (sin enviar nada) los peers sin `PV` vistos en los últimos 14 días (pantalla Audio Diagnostics en iOS, log en Android y Mac). Se puede retirar la compatibilidad cuando: (a) todos los testers confirmen una build con `PV` 2 o mayor, (b) ese contador marque 0 durante 14 días seguidos y (c) el usuario lo apruebe por escrito. Los iPhone XS, XS Max y XR y los iPad sin iPadOS 26 quedan en la última build compatible y no podrán unirse a grupos nuevos cuando eso ocurra (spec 5).

@@ -1,0 +1,8 @@
+# label | payload (\n = salto de línea) | nombre esperado | PV | ID | CAP (ordenado, coma)
+# "-" = ausente / vacío. Las suites de iOS y Android copian estos casos.
+legacy-name-only|Ana|Ana|-|-|-
+full|Ana\nALT=12.50\nBAT=80\nPV=2\nID=0A1B2C3D\nCAP=HB,SEQ|Ana|2|0A1B2C3D|HB,SEQ
+unknown-lines|Ana\nPV=9\nID=ZZZZZZZZ\nCAP=XYZ,HB\nFOO=1|Ana|9|-|HB,XYZ
+blank-and-no-equals|Ana\n\nbasura\nPV=2|Ana|2|-|-
+pv-not-number|Ana\nPV=x\nID=0A1B2C3D|Ana|-|0A1B2C3D|-
+empty-name|\nPV=2|INVALID|-|-|-
