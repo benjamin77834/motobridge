@@ -111,4 +111,4 @@ Criterios de aceptación:
 - RSSI, Wi-Fi Aware y `WAPerformanceReport` (descartados, requieren emparejado y el soporte de Android no está verificado).
 - Autenticación de listas de vecinos (ver riesgo en README).
 - Cambio de TTL a un valor distinto de 6.
-- Cambio de límite de 5 conexiones.
+- Cambio de límite de 5 conexiones (decisión de tamaño de grupo, `design.md` decisión 6).

@@ -69,6 +69,10 @@ Mac Relay ya reenvía entre Multipeer y UDP (`RelaySession.swift:490-491`) con u
 
 La deduplicación por `originId` + `packetId` ya existe (`MeshRelay.swift:27,56-60`) y con el spec 3 la cabecera de malla está siempre presente con vecinos `SEQ`, así que también protege contra el doble camino del spec 5.
 
+## Decisión 6: tamaño de grupo (delegada al arquitecto por el usuario)
+El usuario aceptó "6 está bien" y delegó la decisión. **Fijado:** objetivo de 6 riders por vista directa (el límite actual de 5 conexiones por nodo, `PeerBridgeSession.swift:53`) y los grupos mayores se forman por malla multi-salto con TTL 6 (decisión 4). No se sube el límite de 5 conexiones.
+Razones: (a) una `MCSession` admite hasta 8 peers según Apple, pero el límite de 5 ya existe en el código y en Android y cambiarlo cambia el costo de radio y de CPU de todos los nodos sin evidencia; (b) el costo del relay selectivo (R8) crece con los vecinos directos, y 5 es el máximo de la lista `NB`; (c) el alcance adicional lo da la cadena de saltos, que es el propósito de la malla. Los datos de campo (R8) pueden reabrir el número.
+Con TTL 6 una cadena lineal alcanza como máximo 7 nodos desde el origen (origen más 6 saltos). La tabla de orígenes admite 32 (spec 1, R4.6). No se promete cuántos riders reales funcionan en una topología dada: lo mide la prueba de campo con al menos 4 dispositivos (R8). Número final de riders soportados: por medir.
 ## Archivos a modificar
 
 - iOS/Mac: `MotoBridge/Core/Network/MeshRelay.swift` (compartido; añadir la función de decisión y tablas, o un archivo nuevo `RelayPlanner.swift` junto a él y agregado a `sources` de MonoBridgeRelay en `project.yml`), `AudioTransport.swift` (envío dirigido), `PeerBridgeSession.swift`, `LocalNetworkTransport.swift`, `NetworkBridgeController.swift` (`wireTransport` y `wireGatewayTransport`, `:1073-1150`; `sendPresence` `:822-850`), `AudioDiagnosticsView.swift`.

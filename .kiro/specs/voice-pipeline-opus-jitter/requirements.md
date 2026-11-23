@@ -14,8 +14,8 @@ Que la voz viaje en Opus de 24 kbps en paquetes de 20 ms con número de secuenci
 - Entrada: estudio §2 sección B y riesgo 3. Datos del código: Opus apagado por defecto (`NetworkBridgeController.swift:161-166,579-582`); iOS no fija bitrate (`OpusCodec.swift`); Android fija 24000 (`audio/OpusCodec.kt:34-36`); captura iOS con tap de 1024 muestras sin reempaquetar (`AudioIO.swift:124`); iOS descarta el paquete nuevo si ya hay 6 en cola (`AudioIO.swift:266-268`) y Android descarta el viejo con cola de 3 (`audio/AudioIO.kt:221-223`); el paquete de audio es `[codec][payload]` sin secuencia (`AudioIO.swift:213-216`).
 - Hecho del código: la voz va a 16 kHz mono (`AudioIO.swift:22`, `audio/AudioIO.kt:22`) y no a 8 kHz como decía `PROTOCOL.md`.
 - Hecho del código: el comentario del controlador avisa que Opus puede **crashear** si llega audio no-Opus o viceversa (`NetworkBridgeController.swift:161-163`). Por eso la elección del códec es del grupo entero, no del par (ver diseño).
-- Supuesto A1: bitrate fijo de 24 kbps. El usuario no respondió la pregunta de bitrate adaptativo; se deja el adaptativo en backlog.
-- Supuesto A2: latencia extremo a extremo propuesta, a validar con el usuario: ≤ 250 ms con 1 salto y ≤ 400 ms con 3 saltos. Son metas propuestas, no medidas.
+- Supuesto A1: bitrate fijo de 24 kbps. El usuario no respondió la pregunta de bitrate adaptativo (sigue abierta en el README, pregunta 3); se deja el adaptativo en backlog.
+- Supuesto A2: latencia extremo a extremo ≤ 250 ms con 1 salto y ≤ 400 ms con 3 saltos. Metas propuestas por el arquitecto y **aceptadas por el usuario** (README, respuesta 5). Aún no están medidas.
 - Supuesto A3: `RelayAudio.swift` del Mac Relay se revisa en la tarea 1; si solo reenvía paquetes y no reproduce, el jitter buffer no aplica en Mac y se declara.
 
 ## Requisitos funcionales (EARS)
@@ -93,7 +93,7 @@ Criterios de aceptación:
 ### R8. Latencia
 
 Criterios de aceptación:
-1. R8.1 La latencia boca a oído (captura a reproducción) con 1 salto es ≤ 250 ms en el percentil 90 de 20 mediciones (meta propuesta; ver pregunta abierta).
+1. R8.1 La latencia boca a oído (captura a reproducción) con 1 salto es ≤ 250 ms en el percentil 90 de 20 mediciones (meta aceptada por el usuario; falta medirla).
 2. R8.2 Con 3 saltos (spec 4 en marcha) es ≤ 400 ms en p90.
 3. R8.3 El método de medida (tono de referencia y grabación de ambos extremos) queda documentado en `TEST_PLAN.md`.
 
@@ -106,5 +106,5 @@ Criterios de aceptación:
 
 - Bitrate adaptativo según calidad de enlace (backlog, pregunta 17 del estudio).
 - FEC en banda y DTX (se revisarán con datos de campo).
-- Cifrado del audio.
+- Cifrado del audio (spec 7 `audio-encryption`, que se aplica a la carga del formato v2 de este spec).
 - Relay selectivo (spec 4) y retransmisión de paquetes perdidos (nunca).

@@ -1,0 +1,54 @@
+# Tareas: audio-encryption
+Convención: cada tarea indica plataforma, criterio de terminado (CT) y pruebas. Ninguna tarea toca App Store ni la configuración de git. Las tareas 4 en adelante no empiezan hasta resolver D1 y D2 (design.md).
+- [ ] 1. Verificar supuestos y fijar el algoritmo (D1)
+  - [ ] 1.1 iOS y Mac: confirmar con el SDK local qué AEAD ofrece CryptoKit con el deployment target vigente.
+  - [ ] 1.2 Android: prueba en un dispositivo físico con `minSdk` 26 y con el Android más nuevo (Samsung S25) de qué AEAD ofrece `javax.crypto` y desde qué API.
+  - [ ] 1.3 Buscar en el código si existe un concepto de grupo con secreto (A1) y registrar el resultado.
+  - [ ] 1.4 Probar con la baseline qué hace una app vieja al recibir un byte de códec con el bit 6 activo (A3). Confirmar que ese bit no está en uso.
+  - CT: D1 y los supuestos A1 a A3 resueltos o registrados como abiertos, con el resultado en este spec.
+  - Pruebas: manual en dispositivos reales.
+  - _Requisitos: R1, R4_
+- [ ] 2. Resolver con el usuario D2, D4 y D5
+  - [ ] 2.1 Presentar al usuario las opciones de gestión de clave de la decisión 4 y registrar la elección.
+  - CT: D2, D4 y D5 decididas por escrito; si D4 queda abierta, `KNOWN_LIMITATIONS.md` lo dice (R2.5).
+  - _Requisitos: R2_
+- [ ] 3. Vectores de prueba compartidos
+  - [ ] 3.1 Crear `.kiro/specs/audio-encryption/vectors/crypto-vectors.txt` con clave, nonce, datos asociados, texto plano y cifrado esperado, más casos inválidos (etiqueta alterada, contador repetido).
+  - CT: el archivo cubre R1.4 a R1.6; las tres suites lo consumen o lo copian.
+  - _Requisitos: R7.1_
+- [ ] 4. Módulo de cifrado (lógica pura)
+  - [ ] 4.1 iOS y Mac: `AudioCrypto.swift` con derivación de clave por origen, cifrar, descifrar y ventana anti-repetición; agregarlo a `sources` del target MonoBridgeRelay en `project.yml`.
+  - [ ] 4.2 Android: `audio/AudioCrypto.kt` con la misma lógica y las mismas reglas.
+  - CT: los vectores de la tarea 3 pasan en las tres plataformas; R1.4 a R1.6.
+  - Pruebas: XCTest y JUnit unitarias.
+  - _Requisitos: R1, R7_
+- [ ] 5. Almacén de clave y capacidad `ENC`
+  - [ ] 5.1 iOS y Mac: guardar y leer la clave en Keychain; anunciar `ENC` solo con clave disponible.
+  - [ ] 5.2 Android: almacén de claves de Android; mismo comportamiento.
+  - CT: R2.2, R2.3, R6.2 y R6.3; revisión de código de que la clave no aparece en logs ni en la exportación del diagnóstico.
+  - _Requisitos: R2, R6_
+- [ ] 6. Selección de cifrado, envío y recepción
+  - [ ] 6.1 iOS: función única de selección (todos los vecinos y orígenes con `ENC`), envío y recepción cifrados, relay sin descifrar.
+  - [ ] 6.2 Android y Mac: equivalentes.
+  - [ ] 6.3 Indicador en pantalla con los tres estados (R3.4) en iOS, Android y Mac.
+  - CT: R1, R3, R4.2 y R5.4; con un par sin `ENC` el grupo baja a claro en menos de 500 ms.
+  - Pruebas: unitarias de selección con tabla simulada; manual con una cadena de 3 nodos.
+  - _Requisitos: R1, R3, R4, R5.4_
+- [ ] 7. Política `compatible` y `obligatorio`
+  - [ ] 7.1 Opción local con `compatible` por defecto y mensaje en `obligatorio` (R3.5, R3.6).
+  - CT: con `obligatorio` un par sin `ENC` no se oye y se muestra el motivo.
+  - _Requisitos: R3_
+- [ ] 8. Medición de batería y CPU (D6)
+  - [ ] 8.1 Ruta de 30 min con y sin cifrado en un iPhone físico y un Android físico; registrar CPU, porcentaje de batería y latencia (R5.2, R5.3).
+  - CT: las mediciones quedan en `KNOWN_LIMITATIONS.md` y el usuario fija el presupuesto.
+  - Pruebas: manual con dispositivos.
+  - _Requisitos: R5_
+- [ ] 9. Interoperabilidad y publicación
+  - [ ] 9.1 Repetir la matriz C1 del spec 1 en modo `compatible` con una build baseline en el grupo.
+  - CT: las cuatro combinaciones pasan; la baseline sigue oyendo y siendo oída y no recibe ruido.
+  - _Requisitos: R4, R7.4_
+- [ ] 10. Documentación
+  - [ ] 10.1 `PROTOCOL.md`: formato cifrado, nonce, datos asociados, negociación, política.
+  - [ ] 10.2 `KNOWN_LIMITATIONS.md`: metadatos sin cifrar, revocación, mediciones.
+  - CT: R7.2 y R7.3.
+  - _Requisitos: R7_

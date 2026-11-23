@@ -46,7 +46,8 @@ Cada tarea indica plataforma, criterio de terminado (CT) y pruebas. Requiere el 
   - [ ] 6.1 Preparar la matriz de R7.1 en `TEST_PLAN.md` con la plantilla de resultados de R7.2.
   - [ ] 6.2 Ejecutar con al menos 2 iPhones físicos y 1 Android o Mac; 3 duraciones (1, 5, 30 min); registrar versión de iOS y modelo.
   - [ ] 6.3 Escribir los resultados en `KNOWN_LIMITATIONS.md` y fijar la tabla `backgroundPathPreference` (iOS) con los valores observados; las celdas sin prueba quedan en `desconocido`.
-  - [ ] 6.4 Si Multipeer o UDP no sobreviven en segundo plano con `audio`, documentar la contingencia (modo `voip` o aviso al rider) y llevarla a decisión del usuario en el README.
+  - [ ] 6.4 Si Multipeer o UDP no sobreviven en segundo plano con `audio`, evaluar el modo `voip` con CallKit (autorizado por el usuario) en un build de depuración, con una prueba del arranque, y registrar el resultado de ambos modos. No se publica en TestFlight sin aprobación escrita y sin documentar el riesgo de revisión de Apple.
+  - [ ] 6.5 Documentar la decisión final con la evidencia de 6.2 a 6.4 en `KNOWN_LIMITATIONS.md` y en el README.
   - CT: todas las celdas de R7.1 tienen resultado o están marcadas "no probada" con motivo; la tabla está en el código.
   - Pruebas: manual con dispositivos (única forma posible).
   - _Requisitos: R7, R6.6_

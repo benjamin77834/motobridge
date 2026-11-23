@@ -3,7 +3,7 @@
 Requiere los specs 1 a 4 terminados. Las tareas modifican proyectos (`project.yml`) y no tocan App Store ni la configuración de git.
 
 - [ ] 1. Preparación y prototipo de la API de iOS 26
-  - [ ] 1.1 Comprobar con `xcodebuild -version` y en Xcode qué versión usa el build real (A2) y que no hay `SWIFT_TREAT_WARNINGS_AS_ERRORS` en los targets (R1.4).
+  - [ ] 1.1 Comprobar con `xcodebuild -version` y en Xcode qué versión usa el build real frente al Xcode 27.2.1 de referencia (A2); anotar la diferencia sin bloquear y que no hay `SWIFT_TREAT_WARNINGS_AS_ERRORS` en los targets (R1.4).
   - [ ] 1.2 iOS: prototipo aislado (target o archivo de prueba, no se integra) con `NetworkListener` + Bonjour `_motobridge._udp` + `NetworkBrowser` + `NetworkConnection` UDP y P2P incluido entre dos iPhones físicos; cierra las dudas de firma y de entrega de datagramas listadas en el diseño (decisión 3).
   - [ ] 1.3 Probar que un Android (build actual) descubre al iPhone con el listener nuevo y viceversa.
   - CT: documento breve en este directorio (`prototype-notes.md`) con firmas verificadas y resultados; el prototipo manda y recibe datagramas de 100 bytes entre iPhone↔iPhone y iPhone↔Android.

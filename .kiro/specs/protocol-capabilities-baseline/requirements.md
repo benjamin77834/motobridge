@@ -89,7 +89,7 @@ EL SISTEMA DEBERÁ tener una matriz de pruebas de interoperabilidad ejecutable a
 
 Criterios de aceptación:
 1. R7.1 La matriz cubre las cuatro combinaciones de C1 y se registra el resultado (pasa o falla, fecha, build) por cada una.
-2. R7.2 La build baseline se identifica por el commit `f494455` o por el commit que el usuario designe como publicado (ver pregunta abierta en README).
+2. R7.2 La build baseline se identifica por el commit `f494455` o por el commit que el usuario designe como publicado (la pregunta abierta sigue en README, pregunta 1).
 3. R7.3 Una combinación que falla bloquea la publicación en TestFlight de ese spec.
 
 ### R8. Ventana de transición y retiro de la compatibilidad
@@ -100,16 +100,16 @@ Criterios de aceptación:
 1. R8.1 El diagnóstico local (pantalla de diagnóstico existente en iOS, log en Android y Mac) muestra el número de peers legacy vistos en los últimos 14 días. No se envía a ningún servidor.
 2. R8.2 `PROTOCOL.md` define el retiro: se puede retirar la compatibilidad cuando se cumplan las tres condiciones: (a) todos los testers del grupo confirman estar en una build con `PV` igual o mayor a 2; (b) el contador de R8.1 marca 0 durante 14 días seguidos; (c) el usuario lo aprueba por escrito.
 3. R8.3 El código de compatibilidad (rutas "legacy") queda aislado en funciones o clases con nombre `Legacy*` para poder borrarlo en un solo cambio.
-4. R8.4 `PROTOCOL.md` y el README de specs advierten que iPhone XS, XS Max y XR (ver spec 5) se quedan en la última build compatible y dejan de poder unirse a grupos cuando se retire la compatibilidad.
+4. R8.4 `PROTOCOL.md` y el README de specs advierten que iPhone XS, XS Max y XR y los iPad sin iPadOS 26 (ver spec 5) se quedan en la última build compatible y dejan de poder unirse a grupos cuando se retire la compatibilidad.
 
 ## Requisitos no funcionales
 
 - NF1. El tamaño agregado de las tres líneas nuevas no supera 80 bytes por presencia.
 - NF2. Sin dependencias nuevas en iOS y Mac. En Android solo se añade JUnit como dependencia de pruebas (ver tarea 1).
-- NF3. Sin cifrado nuevo. La seguridad queda fuera de alcance (ver README, pregunta abierta de cifrado).
+- NF3. Sin cifrado nuevo en este spec. El usuario decidió cifrar el audio ("sí, ya es momento"); eso es el spec 7 `audio-encryption`, que añade el token `ENC` a `CAP` sobre esta base.
 
 ## Fuera de alcance
 
 - Cualquier cambio de formato de audio, de cabecera de malla, de TTL o de heartbeat (specs 2 a 4).
-- Cifrado del audio.
+- Cifrado del audio (spec 7 `audio-encryption`).
 - Versionado del servicio Bonjour.

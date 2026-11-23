@@ -21,7 +21,7 @@ Subir el mínimo a iOS 26 y macOS 26, reconstruir el transporte UDP sobre la API
 
 ## Efecto de subir el mínimo a iOS 26 (riesgo aceptado por el usuario)
 
-iOS 26 exige un iPhone con chip A13 Bionic o posterior y al menos 3 GB de RAM (fuente: [Wikipedia, iOS 26, sección Supported devices](https://en.wikipedia.org/wiki/IOS_26), que cita a Apple; la página de compatibilidad de apple.com no pudo leerse de forma automática, así que se debe confirmar a mano en https://www.apple.com/ios/ios-26/). Quedan **sin actualización** de la app:
+iOS 26 exige un iPhone con chip A13 Bionic o posterior y al menos 3 GB de RAM (fuente: [Wikipedia, iOS 26, sección Supported devices](https://en.wikipedia.org/wiki/IOS_26), que cita a Apple; la página de compatibilidad de apple.com no pudo leerse de forma automática, así que se debe confirmar a mano en https://www.apple.com/ios/ios-26/. Apoyo oficial parcial: los avisos de seguridad de Apple de iOS 26.2 y 26.3 listan como destino "iPhone 11 and later", [Apple, iOS 26.3 y iPadOS 26.3](https://support.apple.com/en-gw/126346)). Quedan **sin actualización** de la app:
 
 | Modelo | Chip | Estado con iOS 26 |
 |---|---|---|
@@ -29,17 +29,17 @@ iOS 26 exige un iPhone con chip A13 Bionic o posterior y al menos 3 GB de RAM (f
 | iPhone XS Max | A12 | No compatible |
 | iPhone XR | A12 | No compatible |
 
-Los iPhone 11, 11 Pro, 11 Pro Max, SE (2.ª generación) y posteriores sí son compatibles. Modelos anteriores al XS ya no reciben la app actual por su mínimo iOS 17 (no se verifica aquí el detalle). Los iPad (`TARGETED_DEVICE_FAMILY` "1,2" en `project.yml`) no se verificaron: está en preguntas abiertas.
+Los iPhone 11, 11 Pro, 11 Pro Max, SE (2.ª generación) y posteriores sí son compatibles. Modelos anteriores al XS ya no reciben la app actual por su mínimo iOS 17 (no se verifica aquí el detalle). El usuario confirmó que **sí usa iPad** (`TARGETED_DEVICE_FAMILY` "1,2" en `project.yml`) y aceptó que los modelos sin iPadOS 26 queden fuera. Según el mismo aviso de seguridad de Apple ([iOS 26.3 y iPadOS 26.3](https://support.apple.com/en-gw/126346)), iPadOS 26 llega a: iPad Pro 12,9 pulgadas de 3.ª generación y posteriores, iPad Pro 11 pulgadas de 1.ª generación y posteriores, iPad Air de 3.ª generación y posteriores, iPad de 8.ª generación y posteriores, e iPad mini de 5.ª generación y posteriores. Un iPad que no esté en esa lista no puede actualizar la app a la build con mínimo 26 (por ejemplo el iPad de 7.ª generación, según [un hilo de la comunidad de Apple](https://discussions.apple.com/thread/256180462), fuente no oficial para ese modelo). La lista oficial completa por modelo y la de iPhone siguen por confirmar en las páginas de compatibilidad de apple.com, que no se pudieron leer de forma automática.
 
 Consecuencias:
 - Un rider con iPhone XS, XS Max o XR queda en la última build con mínimo iOS 17. Cuando se retire la compatibilidad (spec 1, R8), esa build no podrá unirse a grupos con builds nuevas.
-- Mac Relay sube a macOS 26. Según Wikipedia, macOS Tahoe es la última versión que soporta Macs Intel y solo algunos modelos (2020 iMac, 16" MacBook Pro 2019, 13" MacBook Pro 2020 de cuatro puertos y Mac Pro 2019, además de Apple silicon). Macs más antiguos quedan sin actualización del Relay. Supuesto: el usuario lo acepta igual que en iOS (confirmar en README).
+- Mac Relay sube a macOS 26. Según Wikipedia, macOS Tahoe es la última versión que soporta Macs Intel y solo algunos modelos (2020 iMac, 16" MacBook Pro 2019, 13" MacBook Pro 2020 de cuatro puertos y Mac Pro 2019, además de Apple silicon). Macs más antiguos quedan sin actualización del Relay. **Aceptado por el usuario** (README, respuesta 3).
 - Android no se ve afectado por el mínimo de iOS. `minSdk` sigue en 26.
 
 ## Supuestos
 
 - A1. La API nueva solo existe en iOS/macOS 26.0 o posterior. Verificado en el SDK local: el archivo `Network.swiftinterface` marca `NetworkBrowser`, `NetworkListener`, `NetworkConnection`, `UDP` y `BonjourListenerProvider` como `iOS 26.0`, y existe `peerToPeerIncluded(_:)` para activar Wi-Fi peer-to-peer. `MCSession` está marcada `API_DEPRECATED("Use Network Framework instead", ... ios(7.0, 27.0))` en el SDK local.
-- A2. El Xcode instalado en esta máquina informa `Xcode 27.0 (27A266a)`; el usuario dice tener 27.2.1. Se verifica en la tarea 1 qué Xcode usa el build real. No cambia el diseño pero sí qué advertencias aparecen.
+- A2. **Xcode de referencia: 27.2.1** (fijado por el usuario). El Xcode instalado en la máquina donde se escribieron estos specs informa `Xcode 27.0 (27A266a)`; es una diferencia anotada, no un bloqueo. La tarea 1 registra qué Xcode usa el build real. No cambia el diseño pero sí qué advertencias aparecen.
 - A3. No se encontró fecha de eliminación de Multipeer; hoy es una deprecación de compilación, no de ejecución.
 - A4. El transporte UDP actual de iOS ya usa Network framework clásico (`NWListener`, `NWBrowser`, `NWConnection`) con `includePeerToPeer = true` y habla con Android (`LocalNetworkTransport.swift:90-188`). Lo nuevo es (a) reescribirlo con la API de iOS 26 y (b) que trabaje junto con Multipeer como caminos del mismo vecino en lugar de como dos mundos separados que hoy se unen por un puente (`NetworkBridgeController.swift:1073-1150`).
 - A5. Android no puede unirse a la red Wi-Fi peer-to-peer (AWDL) de Apple. Android ↔ iPhone sigue necesitando Wi-Fi o hotspot compartido.
@@ -125,7 +125,7 @@ Criterios de aceptación:
 ### R9. Seguridad y permisos
 
 Criterios de aceptación:
-1. R9.1 El nivel de cifrado no empeora: Multipeer sigue con el nivel actual (`.optional`) y Network sigue en claro como la baseline. Mejorarlo es una decisión pendiente (README).
+1. R9.1 El nivel de cifrado no empeora: Multipeer sigue con el nivel actual (`.optional`) y Network sigue en claro como la baseline. Mejorar el cifrado de extremo a extremo es el spec 7 `audio-encryption`, que se aplica en la capa de aplicación y cubre los dos caminos sin cambiar este nivel.
 2. R9.2 Los textos de permiso de red local existentes se conservan.
 
 ## Requisitos no funcionales
@@ -137,7 +137,7 @@ Criterios de aceptación:
 ## Fuera de alcance
 
 - Wi-Fi Aware, `WAPerformanceReport`.
-- Cifrado nuevo de audio (DTLS o PSK).
+- Cifrado nuevo de audio (spec 7 `audio-encryption`; DTLS o PSK de transporte no se usan).
 - Un tercer camino (Bluetooth, hotspot automático).
 - Retirar Multipeer.
 - Cambiar el puerto o el nombre del servicio Bonjour.

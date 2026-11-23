@@ -15,7 +15,7 @@ Detectar en unos 2 segundos que un vecino directo dejó de estar, reconectarlo s
 - Hecho del código: `UIBackgroundModes = audio` (`Info.plist:51-54`) y `isIdleTimerDisabled = true` ya existen (`NetworkBridgeController.swift:1310`, se revierte en `:1572`). Android ya usa servicio en primer plano de micrófono con `WakeLock` y `WifiLock` (`BridgeService.kt`). Mac ya usa `ProcessInfo.beginActivity` (`RelaySession.swift:266`).
 - **NO CONFIRMADO por Apple:** si Multipeer o Network framework mantienen la conexión con la app en segundo plano y `UIBackgroundModes = audio`. Apple documenta que Multipeer deja de buscar y anunciar en segundo plano (foro 836124) y que la red se detiene si la app se suspende (foro 695125). Este spec no asume el resultado: exige una prueba en dispositivo (R7) y diseña para ambos desenlaces.
 - Supuesto A1: umbral de caída 2 s y keepalive 500 ms son los que pidió el usuario; se tratan como constantes ajustables tras el campo.
-- Supuesto A2: "rejoin en un tiempo razonable" se fija en p90 ≤ 8 s tras volver a estar en rango. Es un número propuesto, no del usuario; está en preguntas abiertas.
+- Supuesto A2: "rejoin en un tiempo razonable" se fija en p90 ≤ 8 s tras volver a estar en rango. Propuesto por el arquitecto y **aceptado por el usuario** (README, respuesta 5). Se mide en campo y se puede ajustar con datos.
 
 ## Requisitos funcionales (EARS)
 

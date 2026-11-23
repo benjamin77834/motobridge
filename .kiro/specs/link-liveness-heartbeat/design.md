@@ -66,7 +66,10 @@ Lo que se añade:
 Alternativas descartadas:
 - *Prometer que funciona en segundo plano sin probarlo*: Apple no lo confirma.
 - *Tarea de fondo con `beginBackgroundTask`*: da un máximo de unos segundos, no sirve para una ruta de horas. Se descarta.
-- *Modo de fondo `voip`*: obliga a usar PushKit y CallKit con llamadas reales, y el App Store lo revisa por uso VoIP real. No se adopta sin evidencia de que `audio` no basta. Queda como contingencia en preguntas abiertas del README si la prueba falla.
+- *Modo de fondo `voip`*: obliga a usar PushKit y CallKit con llamadas reales, y el App Store lo revisa por uso VoIP real. **El usuario autorizó evaluarlo** (README, respuesta 6) si `audio` no basta, con dos antecedentes que él dio: la app debe estar siempre activa mientras haya enlace, y Apple rechazó antes un build por un crash al arrancar con `voip` y `location` (ya quitados). Esos dos modos no están hoy en `Info.plist` (solo `audio`). No se adopta sin evidencia.
+  - **Regla de decisión:** la matriz del R7 (tarea 6) decide. Si con `audio` el enlace sobrevive en segundo plano y con pantalla bloqueada durante la prueba de 30 min, `voip` no se añade. Si no sobrevive, se prueba `voip` en un build de depuración local antes de cualquier TestFlight, con el arranque cubierto por una prueba para no repetir el crash que Apple rechazó.
+  - **Riesgo de revisión que se documenta, no se asume resuelto:** Apple puede rechazar `voip` si la app no es VoIP real. La decisión final con la evidencia queda escrita en `KNOWN_LIMITATIONS.md` y en el README.
+  - **Nota sobre CallKit:** el código ya tiene `useCallKit` activado por defecto (hallazgo del informe de Daniela, `.agents/tasks/daniela-one-way-audio.md`); la tarea 6 verifica qué hace hoy antes de planear cambios.
 
 ## Archivos a modificar
 

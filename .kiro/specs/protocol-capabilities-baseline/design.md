@@ -36,6 +36,7 @@ Tokens definidos (cada spec activa el suyo):
 | `OPUS` | spec 3 | El nodo puede codificar y decodificar Opus de forma fiable |
 | `SR` | spec 4 | Anuncia lista de vecinos y acepta relay selectivo |
 | `DP` | spec 5 | Soporta doble camino con deduplicación y elección de camino |
+| `ENC` | spec 7 | Puede cifrar y descifrar la voz con la clave del grupo (ver `audio-encryption`) |
 
 `TEST` existe solo en builds de depuración y sirve para la prueba R5.2.
 
@@ -73,7 +74,7 @@ Archivos a tocar:
 
 Decisión del usuario: las versiones nuevas pueden forzar la actualización. Aun así, el rollout por TestFlight no es instantáneo, así que la compatibilidad rige solo hasta cumplir las tres condiciones de R8.2. Se elige un criterio verificable (contador local más confirmación humana) porque no hay telemetría remota y no se añade, por privacidad.
 
-Consecuencia que el usuario debe conocer: los iPhone XS, XS Max y XR no pueden instalar iOS 26 (spec 5). Esos dispositivos quedarán en una build antigua que no tendrá `PV` 2. Al retirar la compatibilidad no podrán entrar a grupos con builds nuevas.
+Consecuencia que el usuario debe conocer y aceptó (README, respuesta 4): los iPhone XS, XS Max y XR y los iPad sin iPadOS 26 no pueden instalar el sistema nuevo (spec 5). Esos dispositivos quedarán en una build antigua que no tendrá `PV` 2. Al retirar la compatibilidad no podrán entrar a grupos con builds nuevas.
 
 ## Manejo de errores
 
