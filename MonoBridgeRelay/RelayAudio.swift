@@ -125,8 +125,9 @@ final class RelayAudio {
             voiceEnhancer.process(ch[0], count: Int(out.frameLength), sampleRate: Self.networkSampleRate)
         }
         guard let data = Self.data(from: out) else { return }
+        guard let payload = codec.encode(data) else { return }
         var packet = Data([codec.codecId])
-        packet.append(codec.encode(data))
+        packet.append(payload)
         if capCount % 50 == 2 { alog.info("enviando audio \(packet.count) bytes") }
         onCapturedAudio?(packet)
     }

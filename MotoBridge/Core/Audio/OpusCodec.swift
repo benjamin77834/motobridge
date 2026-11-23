@@ -38,9 +38,9 @@ final class OpusCodec: AudioCodec {
         }
     }
 
-    func encode(_ pcm: Data) -> Data {
+    func encode(_ pcm: Data) -> Data? {
         guard let encoder,
-              let inBuffer = Self.buffer(from: pcm, format: format) else { return pcm }
+              let inBuffer = Self.buffer(from: pcm, format: format) else { return nil }
         do {
             // Salida comprimida (buffer generoso).
             var out = Data(count: 1500)
@@ -49,7 +49,8 @@ final class OpusCodec: AudioCodec {
             }
             return out.prefix(bytes)
         } catch {
-            return pcm // si falla, no romper el audio
+            log.warning(.audioSession, "Opus encode falló: \(error.localizedDescription)")
+            return nil // el llamador descarta el bloque (no enviar PCM marcado como Opus)
         }
     }
 

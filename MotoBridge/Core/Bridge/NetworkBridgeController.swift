@@ -41,6 +41,10 @@ final class NetworkBridgeController: ObservableObject {
     @Published private(set) var isTransmitting = false
     @Published private(set) var packetsSent = 0
     @Published private(set) var packetsReceived = 0
+    /// Paquetes de audio entrantes descartados (jitter buffer lleno o engine parado).
+    @Published private(set) var packetsDropped = 0
+    /// El permiso de micrófono está denegado: no se puede transmitir voz.
+    @Published private(set) var micPermissionDenied = false
 
     // Estado genérico del transporte (para la UI, agnóstico del modo).
     @Published private(set) var state: TransportState = .notConnected
@@ -158,9 +162,10 @@ final class NetworkBridgeController: ObservableObject {
         didSet { audioIO.gateThreshold = noiseGate }
     }
 
-    /// Compresión Opus. DESACTIVADO por defecto: PCM es 100% estable. Opus
-    /// puede crashear si llegan datos no-Opus (desajuste entre dispositivos),
-    /// así que se activa manualmente solo cuando ambos lados lo tienen igual.
+    /// Compresión Opus. DESACTIVADO por defecto (PCM es el modo más simple). El
+    /// receptor decodifica PCM y Opus según el primer byte del paquete, así que
+    /// un desajuste entre dispositivos no rompe el audio. Si el codificador
+    /// falla, el bloque se descarta (no se envía PCM marcado como Opus).
     @Published var opusEnabled: Bool = false {
         didSet { audioIO.opusEnabled = opusEnabled }
     }
@@ -504,6 +509,9 @@ final class NetworkBridgeController: ObservableObject {
         }
         // Nivel de voz ENTRANTE -> detector de rumbo del Modo Rescate (la señal
         // más fuerte indica hacia dónde conviene buscar, combinado con brújula).
+        audioIO.onPacketDropped = { [weak self] in
+            DispatchQueue.main.async { self?.packetsDropped += 1 }
+        }
         audioIO.onReceivedLevel = { [weak self] level in
             guard let self, self.rescueMode else { return }
             DispatchQueue.main.async { self.rescueSensors.noteSignalSample(level) }
@@ -1296,6 +1304,11 @@ final class NetworkBridgeController: ObservableObject {
     /// que provoca el "AVAudioSession Hang Risk").
     private let audioQueue = DispatchQueue(label: "com.motobridge.audio", qos: .userInitiated)
 
+    /// Actualiza el aviso de permiso de micrófono denegado.
+    func refreshMicPermission() {
+        micPermissionDenied = AVAudioApplication.shared.recordPermission == .denied
+    }
+
     /// Configura la sesión de audio, arranca captura/reproducción y descubrimiento.
     func start() {
         guard !isRunning else { return }
@@ -1303,8 +1316,11 @@ final class NetworkBridgeController: ObservableObject {
         // iniciar el bridge, acción explícita del usuario) y NO al abrir la app,
         // para no acceder al micrófono en frío (causa del crash al arranque).
         if AVAudioApplication.shared.recordPermission == .undetermined {
-            AVAudioApplication.requestRecordPermission { _ in }
+            AVAudioApplication.requestRecordPermission { [weak self] _ in
+                DispatchQueue.main.async { self?.refreshMicPermission() }
+            }
         }
+        refreshMicPermission()
         isRunning = true
         // Siempre arrancar en modo intercom (cascos), salvo walkie/música auto.
         if !walkieMode && !autoMusicMode && outputTarget != .headset {

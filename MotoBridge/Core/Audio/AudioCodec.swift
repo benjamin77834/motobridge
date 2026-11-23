@@ -10,7 +10,9 @@ protocol AudioCodec: AnyObject {
     /// Identificador del códec (va en la cabecera del paquete).
     var codecId: UInt8 { get }
     /// Comprime un bloque PCM Int16 mono (al sample rate de red) -> bytes.
-    func encode(_ pcm: Data) -> Data
+    /// Devuelve nil si falla: el llamador debe descartar el bloque, nunca
+    /// enviar PCM con el id de otro códec.
+    func encode(_ pcm: Data) -> Data?
     /// Descomprime bytes -> PCM Int16 mono. Devuelve nil si falla.
     func decode(_ bytes: Data) -> Data?
 }
@@ -25,6 +27,6 @@ enum AudioCodecId: UInt8 {
 /// Opus esté integrada y validada, se cambia por OpusCodec.
 final class PCMCodec: AudioCodec {
     let codecId: UInt8 = AudioCodecId.pcm.rawValue
-    func encode(_ pcm: Data) -> Data { pcm }
+    func encode(_ pcm: Data) -> Data? { pcm }
     func decode(_ bytes: Data) -> Data? { bytes }
 }

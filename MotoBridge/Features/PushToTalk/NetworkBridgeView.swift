@@ -8,6 +8,7 @@ struct NetworkBridgeView: View {
     @State private var riderNameField = UserDefaults.standard.string(forKey: "riderName") ?? ""
 
     @State private var showSettings = false
+    @State private var logShare: ShareItem?
     @State private var messageField = ""
     @State private var showSubgroups = false
 
@@ -23,6 +24,9 @@ struct NetworkBridgeView: View {
                         .background(Color.blue.opacity(0.15))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .accessibilityLabel(notice)
+                }
+                if controller.micPermissionDenied {
+                    micDeniedBanner
                 }
                 statusCard          // estado + iniciar/detener
                 nearbyDevicesCard   // dispositivos cercanos: toca para conectar (tipo Bluetooth)
@@ -45,6 +49,13 @@ struct NetworkBridgeView: View {
             // La detección de audífonos ocurre por el observador de routeChange
             // y al pulsar "Detectar audífonos" o "Iniciar bridge".
             controller.refreshMusicState()
+            controller.refreshMicPermission()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            controller.refreshMicPermission()
+        }
+        .sheet(item: $logShare) { item in
+            ShareSheet(items: [item.url])
         }
         .sheet(isPresented: $showSettings) {
             NavigationStack {
@@ -90,6 +101,13 @@ struct NetworkBridgeView: View {
                         AudioDiagnosticsView()
                     } label: {
                         Label("Audio Diagnostics", systemImage: "waveform")
+                    }
+                    Button {
+                        if let url = Logger.shared.exportToFile() {
+                            logShare = ShareItem(url: url)
+                        }
+                    } label: {
+                        Label("Compartir log", systemImage: "square.and.arrow.up")
                     }
                     NavigationLink {
                         HotspotGuideView()
@@ -1090,6 +1108,23 @@ struct NetworkBridgeView: View {
         .cardStyle()
     }
 
+    private var micDeniedBanner: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Micrófono denegado: los demás no te oirán. Actívalo en Ajustes → Mono Bridge → Micrófono.", systemImage: "mic.slash.fill")
+                .font(.subheadline.weight(.semibold))
+            Button("Abrir Ajustes") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .font(.subheadline)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.red.opacity(0.15))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
     private var metricsCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Métricas").font(.headline)
@@ -1100,6 +1135,10 @@ struct NetworkBridgeView: View {
             HStack {
                 Text("Paquetes recibidos").foregroundStyle(.secondary)
                 Spacer(); Text("\(controller.packetsReceived)")
+            }
+            HStack {
+                Text("Paquetes descartados").foregroundStyle(.secondary)
+                Spacer(); Text("\(controller.packetsDropped)")
             }
         }
         .font(.subheadline)

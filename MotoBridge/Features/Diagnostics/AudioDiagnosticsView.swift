@@ -103,13 +103,13 @@ struct AudioDiagnosticsView: View {
 }
 
 /// Wrapper Identifiable para presentar el share sheet.
-private struct ShareItem: Identifiable {
+struct ShareItem: Identifiable {
     let id = UUID()
     let url: URL
 }
 
 /// Envoltura de UIActivityViewController para exportar el diagnóstico.
-private struct ShareSheet: UIViewControllerRepresentable {
+struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
     func makeUIViewController(context: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)

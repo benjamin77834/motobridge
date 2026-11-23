@@ -79,6 +79,25 @@ final class AudioIO {
             channels: Self.networkChannels,
             interleaved: true
         )!
+        configObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
+        ) { [weak self] _ in self?.handleConfigurationChange() }
+    }
+
+    deinit {
+        if let configObserver { NotificationCenter.default.removeObserver(configObserver) }
+    }
+
+    private var configObserver: NSObjectProtocol?
+
+    /// El sistema detuvo el engine (cambio de formato/ruta de hardware). Se
+    /// reinicia para que no quede parado y descartando todo el audio entrante.
+    private func handleConfigurationChange() {
+        guard isRunning else { return }
+        log.warning(.audioSession, "AVAudioEngineConfigurationChange: reiniciando AudioIO")
+        do { try restart() } catch {
+            log.error(.audioSession, "Reinicio tras cambio de configuración falló: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Ciclo de vida
@@ -142,7 +161,7 @@ final class AudioIO {
         playerNode.stop()
         engine.stop()
         captureConverter = nil
-        pendingPlaybackBuffers = 0
+        resetPendingBuffers()
         isRunning = false
         log.info(.audioSession, "AudioIO detenido")
     }
@@ -211,7 +230,7 @@ final class AudioIO {
         }
         if let data = Self.data(from: outBuffer) {
             // Codificar (Opus o PCM) y anteponer 1 byte de códec.
-            let payload = codec.encode(data)
+            guard let payload = codec.encode(data) else { return }
             var packet = Data([codec.codecId])
             packet.append(payload)
             onCapturedAudio?(packet)
@@ -231,6 +250,20 @@ final class AudioIO {
     /// el audio nuevo si ya hay demasiado pendiente (preferimos voz reciente a
     /// bajo retardo).
     private var pendingPlaybackBuffers = 0
+    /// Generación del contador: al reiniciar se incrementa, y los callbacks de
+    /// buffers de una generación anterior ya no decrementan.
+    private var pendingGeneration = 0
+    private let pendingLock = NSLock()
+    /// Se llama (en cualquier hilo) por cada paquete entrante descartado porque
+    /// el engine está parado o el jitter buffer está lleno.
+    var onPacketDropped: (() -> Void)?
+
+    private func resetPendingBuffers() {
+        pendingLock.lock()
+        pendingPlaybackBuffers = 0
+        pendingGeneration += 1
+        pendingLock.unlock()
+    }
     private let maxPendingPlaybackBuffers = 6
 
     /// Aplica ganancia digital a un buffer Int16 con recorte suave (clamp) para
@@ -262,10 +295,14 @@ final class AudioIO {
 
     /// Recibe Data (1 byte de códec + payload) y la reproduce.
     func playReceivedAudio(_ packet: Data) {
-        guard isRunning, packet.count > 1 else { return }
+        guard packet.count > 1 else { return }
+        guard isRunning else { onPacketDropped?(); return }
         // Tope de jitter buffer: si ya hay demasiado audio esperando, descartar
         // este paquete para que la latencia no crezca (desfase de reloj emisor).
-        if pendingPlaybackBuffers >= maxPendingPlaybackBuffers { return }
+        pendingLock.lock()
+        let isFull = pendingPlaybackBuffers >= maxPendingPlaybackBuffers
+        pendingLock.unlock()
+        if isFull { onPacketDropped?(); return }
         // Leer cabecera de códec y decodificar el payload.
         let codecByte = packet[packet.startIndex]
         let payload = packet.subdata(in: (packet.startIndex + 1)..<packet.endIndex)
@@ -302,10 +339,18 @@ final class AudioIO {
 
         guard status != .error, outBuffer.frameLength > 0 else { return }
         applyFloatGain(to: outBuffer, gain: outputGain)
+        pendingLock.lock()
         pendingPlaybackBuffers += 1
+        let generation = pendingGeneration
+        pendingLock.unlock()
         playerNode.scheduleBuffer(outBuffer) { [weak self] in
             // El buffer terminó de reproducirse: liberar un espacio del jitter buffer.
-            DispatchQueue.main.async { self?.pendingPlaybackBuffers -= 1 }
+            guard let self else { return }
+            self.pendingLock.lock()
+            if self.pendingGeneration == generation, self.pendingPlaybackBuffers > 0 {
+                self.pendingPlaybackBuffers -= 1
+            }
+            self.pendingLock.unlock()
         }
     }
 
