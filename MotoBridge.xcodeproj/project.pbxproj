@@ -58,7 +58,6 @@
 		B570DC84322DDFFC6B7B789E /* PeerCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA818FD4C3ED59E4327853E0 /* PeerCapabilities.swift */; };
 		B92E5E72E331404C242E96F6 /* AudioTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47FAFD435FA35518B85EB99B /* AudioTransport.swift */; };
 		BB3AB2390E656EF8DC3239DE /* MeshRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */; };
-		BD7C0189D1F27FBF2822E687 /* MotoBridgeWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 193F8952DDB6C09DA710BAF4 /* MotoBridgeWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C05F1887ED16D7E685C51B6E /* CallKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E30CBE0D99AAA8BB74D3E37 /* CallKitManager.swift */; };
 		C29BA8DD6A6C77A657F9EFB3 /* WatchCommandHandlerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22518AFB5416A83B1969DA6C /* WatchCommandHandlerTests.swift */; };
 		D03330360E1BB3E99C824D32 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 288B6115B720CFEF4733A7CD /* Logger.swift */; };
@@ -82,28 +81,7 @@
 			remoteGlobalIDString = 52F74A5193C83E08514C4F6B;
 			remoteInfo = MotoBridge;
 		};
-		B3EB09980B1495A20A387F5B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 5C34E6F113A1CC728863DA76 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = C337E7709A7F0C89E0AEFC46;
-			remoteInfo = MotoBridgeWatch;
-		};
 /* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		93799275DE93E34E25D77DA4 /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				BD7C0189D1F27FBF2822E687 /* MotoBridgeWatch.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		036F752B59CA465CFD1998E8 /* ConfirmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmView.swift; sourceTree = "<group>"; };
@@ -452,12 +430,10 @@
 				593CCF0E571CABFF16727411 /* Sources */,
 				C14408AA5B8A263183993DF7 /* Resources */,
 				367EFEC28F4C056453C8B143 /* Frameworks */,
-				93799275DE93E34E25D77DA4 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				65BAFBC8EC7AFAC7390470A8 /* PBXTargetDependency */,
 			);
 			name = MotoBridge;
 			packageProductDependencies = (
@@ -692,11 +668,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		65BAFBC8EC7AFAC7390470A8 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = C337E7709A7F0C89E0AEFC46 /* MotoBridgeWatch */;
-			targetProxy = B3EB09980B1495A20A387F5B /* PBXContainerItemProxy */;
-		};
 		9477C6EE2B5CA8A9F7187596 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 52F74A5193C83E08514C4F6B /* MotoBridge */;
@@ -759,7 +730,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 48V68SFH7Q;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -951,7 +922,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 48V68SFH7Q;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
