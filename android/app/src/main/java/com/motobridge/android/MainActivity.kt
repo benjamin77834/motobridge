@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import com.motobridge.android.net.RiderNamePromptPolicy
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,7 +100,23 @@ fun BridgeScreen(
     onRequestMic: () -> Unit
 ) {
     var showSettings by remember { mutableStateOf(false) }
-
+    var promptName by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) { controller.checkNamePrompt(RiderNamePromptPolicy.Trigger.APP_OPEN) }
+    if (controller.showNamePrompt) {
+        LaunchedEffect(Unit) { promptName = controller.suggestedRiderName }
+        AlertDialog(
+            onDismissRequest = { controller.skipNamePrompt() },
+            title = { Text("¿Cuál es tu nombre?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Así te verán los demás riders. Si lo omites usaremos ${controller.suggestedRiderName}. Puedes cambiarlo en Configuración.")
+                    OutlinedTextField(value = promptName, onValueChange = { promptName = it }, singleLine = true)
+                }
+            },
+            confirmButton = { TextButton(onClick = { controller.submitNamePrompt(promptName) }) { Text("Guardar") } },
+            dismissButton = { TextButton(onClick = { controller.skipNamePrompt() }) { Text("Omitir") } }
+        )
+    }
     Column(
         Modifier
             .fillMaxSize()
@@ -504,17 +521,17 @@ private fun SettingsControls(controller: BridgeController) {
     // Nombre del rider
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Tu nombre de rider", fontWeight = FontWeight.Bold)
+            Text("Mi nombre", fontWeight = FontWeight.Bold)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = nameField, onValueChange = { nameField = it },
-                    placeholder = { Text("Ej. Ben, Piloto 1…") },
-                    singleLine = true, enabled = !controller.isRunning,
+                    placeholder = { Text(controller.suggestedRiderName) },
+                    singleLine = true,
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(8.dp))
                 Button(onClick = { controller.applyRiderName(nameField) },
-                       enabled = !controller.isRunning && nameField.isNotBlank()) { Text("Guardar") }
+                       enabled = nameField.isNotBlank()) { Text("Guardar") }
             }
         }
     }

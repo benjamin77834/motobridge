@@ -13,6 +13,7 @@ Origen: `.agents/tasks/ios-mesh-network-framework-study.md` más las decisiones 
 | 5 | `apple-transport-network-framework` | iOS/macOS 26, Network framework y Multipeer a la vez, dedup entre caminos | 1, 2, 3, 4 |
 | 6 | `hotspot-rider-guide` | Guía "Maximizar compatibilidad" | Ninguna (puede ir en cualquier momento) |
 | 7 | `audio-encryption` | Cifrado de la voz en capa de aplicación, capacidad `ENC` negociada, degradación a claro solo en la transición | 1, 3, 4 (no depende del 5; el 2 no es requisito) |
+| 8 | `unique-rider-name` | Nombre único del rider: `iPhone-XXXX` por defecto, sufijo ante colisión, pregunta de nombre al primer arranque (decidido: sí, máx. 2 veces, sin bloquear el audio) | Ninguna |
 
 El spec 7 se aplica a la carga del formato de voz v2 (spec 3) y los relays del spec 4 reenvían la trama cifrada sin descifrarla; por eso va después de 1, 3 y 4. Dos de sus decisiones (gestión de la clave del grupo y revocación) están abiertas y requieren al usuario antes de la implementación (`audio-encryption/design.md`). Los specs 2 y 3 son independientes entre sí en lo técnico. El spec 6 es el de menor riesgo y se puede publicar primero. Cada spec trae tareas para iOS, Android y Mac Relay.
 

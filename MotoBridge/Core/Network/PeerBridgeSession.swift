@@ -38,6 +38,8 @@ final class PeerBridgeSession: NSObject, ObservableObject {
         return new
     }()
 
+    /// "iPad" o "iPhone" para el nombre automático (UIDevice.name casi siempre es "iPhone").
+    static var devicePrefix: String { UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone" }
     /// ¿Debo invitar yo a este peer? Determinista y simétrico: invita el de UID
     /// menor, el otro espera. Si el otro no manda UID (versión vieja), cae al nombre.
     static func shouldInvite(myName: String, otherName: String, otherUID: String?) -> Bool {
@@ -136,8 +138,7 @@ final class PeerBridgeSession: NSObject, ObservableObject {
 
     override init() {
         // Nombre del rider (elegido por el usuario) o el del dispositivo.
-        let saved = UserDefaults.standard.string(forKey: "riderName")
-        let name = (saved?.isEmpty == false ? saved! : UIDevice.current.name)
+        let name = RiderName.current(prefix: Self.devicePrefix, uid: Self.deviceUID)
         // MCPeerID.displayName: 1..63 UTF-8 bytes.
         let safeName = String(name.prefix(60))
         self.myPeerID = MCPeerID(displayName: safeName.isEmpty ? "Rider" : safeName)

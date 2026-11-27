@@ -30,6 +30,7 @@ struct RelayView: View {
     /// ¿Está el cursor en el campo de mensaje? Si sí, la barra espaciadora debe
     /// escribir un espacio y NO activar el push-to-talk.
     @FocusState private var messageFocused: Bool
+    @State private var nameField = UserDefaults.standard.string(forKey: "relayName") ?? ""
 
     var body: some View {
         // ScrollView: el contenido es largo (radar, dispositivos, mensajes, log)
@@ -47,6 +48,7 @@ struct RelayView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
 
+            nameCard
             DisclosureGroup(HotspotGuideContent.entryTitle) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(HotspotGuideContent.intro).font(.callout)
@@ -269,6 +271,21 @@ struct RelayView: View {
         }
     }
 
+    private var nameCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Mi nombre").font(.subheadline.weight(.semibold))
+            if relay.showNameNotice {
+                Text("¿Cuál es tu nombre? Si no lo eliges se usa \(relay.suggestedName).")
+                    .font(.callout).foregroundStyle(.orange)
+            }
+            HStack {
+                TextField(relay.suggestedName, text: $nameField).textFieldStyle(.roundedBorder)
+                Button("Guardar") { relay.saveName(nameField) }.disabled(nameField.isEmpty)
+            }
+            Text("Se aplica al reiniciar la app. No afecta al audio.")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+    }
     private var header: some View {
         HStack(spacing: 12) {
             Image(systemName: "dot.radiowaves.left.and.right")

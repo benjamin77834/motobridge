@@ -7,6 +7,7 @@ struct NetworkBridgeView: View {
     @StateObject private var controller = NetworkBridgeController.shared
     @State private var riderNameField = UserDefaults.standard.string(forKey: "riderName") ?? ""
 
+    @State private var promptNameField = ""
     @State private var showSettings = false
     @State private var logShare: ShareItem?
     @State private var messageField = ""
@@ -50,6 +51,20 @@ struct NetworkBridgeView: View {
             // y al pulsar "Detectar audífonos" o "Iniciar bridge".
             controller.refreshMusicState()
             controller.refreshMicPermission()
+            controller.checkNamePrompt(.appOpen)
+        }
+        .alert("¿Cuál es tu nombre?", isPresented: $controller.showNamePrompt) {
+            TextField("Nombre", text: $promptNameField)
+            Button("Guardar") {
+                controller.submitNamePrompt(promptNameField)
+                riderNameField = controller.riderName
+            }
+            Button("Omitir", role: .cancel) { controller.skipNamePrompt() }
+        } message: {
+            Text("Así te verán los demás riders. Si lo omites usaremos \(controller.suggestedRiderName). Puedes cambiarlo en Ajustes.")
+        }
+        .onChange(of: controller.showNamePrompt) { _, shown in
+            if shown { promptNameField = controller.suggestedRiderName }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             controller.refreshMicPermission()
@@ -728,19 +743,18 @@ struct NetworkBridgeView: View {
     // Paso 0: nombre del rider (cómo te identificas en el grupo).
     private var riderNameCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Tu nombre de rider").font(.headline)
+            Text("Mi nombre").font(.headline)
             HStack {
-                TextField("Ej. Ben, Piloto 1…", text: $riderNameField)
+                TextField(controller.suggestedRiderName, text: $riderNameField)
                     .textFieldStyle(.roundedBorder)
-                    .disabled(controller.isRunning)
                 Button("Guardar") {
                     controller.applyRiderName(riderNameField)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(controller.isRunning || riderNameField.isEmpty)
+                .disabled(riderNameField.isEmpty)
             }
             Text(controller.isRunning
-                 ? "Detén el bridge para cambiar tu nombre."
+                 ? "Se aplicará al detener el bridge."
                  : "Así te verán los demás motociclistas del grupo.")
                 .font(.caption).foregroundStyle(.secondary)
         }

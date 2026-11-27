@@ -74,6 +74,17 @@ final class RelaySession: NSObject, ObservableObject {
     /// llegue el primer dato.
     private var referenceAltitude: Double?
 
+    /// Aviso "¿Cuál es tu nombre?" visible (máx. 2 veces; no bloquea el audio).
+    @Published var showNameNotice = false
+    /// Nombre automático sugerido (Mac-XXXX).
+    var suggestedName: String { RiderName.automatic(prefix: "Mac", uid: Self.deviceUID) }
+    /// Guarda el nombre elegido; se aplica al reiniciar la app (MCPeerID es fijo).
+    func saveName(_ name: String) {
+        if RiderNamePromptPolicy(savedKey: "relayName").save(name) {
+            UserDefaults.standard.set(false, forKey: RiderName.collisionKey)
+            showNameNotice = false
+        }
+    }
     /// Nombre visible de este nodo Mac en la malla.
     let localName: String
 
@@ -228,18 +239,18 @@ final class RelaySession: NSObject, ObservableObject {
     @Published private(set) var audioReady = false
 
     override init() {
-        let saved = UserDefaults.standard.string(forKey: "relayName")
-        let host = Host.current().localizedName ?? "Mac Relay"
-        // Sin emoji: caracteres no-ASCII en el displayName descolocan la regla
-        // de desempate de invitacion (nombre "menor") y causan cruce de sesiones.
-        let base = (saved?.isEmpty == false ? saved! : "Mac \(host)")
-        self.localName = String(base.prefix(60))
+        // Nombre único: el elegido o "Mac-XXXX" (XXXX del UID de esta Mac). Sin
+        // emoji: caracteres no-ASCII descolocan la regla de desempate de invitacion
+        // (nombre "menor") y causan cruce de sesiones.
+        self.localName = RiderName.current(savedKey: "relayName", prefix: "Mac", uid: Self.deviceUID)
         self.myPeerID = MCPeerID(displayName: localName.isEmpty ? "Mac Relay" : localName)
         self.session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .optional)
         self.advertiser = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: ["uid": Self.deviceUID], serviceType: Self.serviceType)
         self.browser = MCNearbyServiceBrowser(peer: myPeerID, serviceType: Self.serviceType)
         self.universal = UniversalTransport(localName: self.localName.isEmpty ? "Mac Relay" : self.localName)
         super.init()
+        let policy = RiderNamePromptPolicy(savedKey: "relayName")
+        if policy.shouldPrompt(.appOpen) { policy.markShown(); showNameNotice = true }
         universal.onPacket = { [weak self] data, key in self?.handleUniversal(data, key: key) }
         universal.onPeersChange = { [weak self] keys in
             guard let self else { return }
@@ -270,6 +281,8 @@ final class RelaySession: NSObject, ObservableObject {
     func start() {
         guard !running else { return }
         running = true
+        let policy = RiderNamePromptPolicy(savedKey: "relayName")
+        if policy.shouldPrompt(.bridgeStart) { policy.markShown(); showNameNotice = true }
         // Evitar que macOS duerma el equipo o suspenda la app (App Nap) mientras el
         // nodo está encendido: con la pantalla apagada se cortaba la conexión. La
         // pantalla SÍ puede apagarse; lo que se mantiene despierto es el sistema.
@@ -752,6 +765,11 @@ extension RelaySession: MCNearbyServiceBrowserDelegate {
         addEvent("Encontrado \(peerID.displayName)")
         if let uid = info?["uid"] { peerUIDs[peerID] = uid }
         if !foundPeers.contains(peerID) { foundPeers.append(peerID) }
+        if peerID.displayName == localName, !UserDefaults.standard.bool(forKey: RiderName.collisionKey) {
+            // Otro nodo con mi mismo nombre: sufijo del UID al reiniciar la app.
+            UserDefaults.standard.set(true, forKey: RiderName.collisionKey)
+            addEvent("Nombre repetido \"\(localName)\": se añadirá el sufijo al reiniciar")
+        }
         refreshNearby()
 
         // Manual: solo queda en la lista; tú eliges con el botón Conectar.

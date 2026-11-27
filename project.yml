@@ -70,6 +70,7 @@ targets:
       - path: MotoBridge/Core/Network/MeshRelay.swift
       - path: MotoBridge/Core/Network/VoiceChannel.swift
       - path: MotoBridge/Core/Network/PeerCapabilities.swift
+      - path: MotoBridge/Core/Network/RiderIdentity.swift
       - path: MotoBridge/Core/Network/HotspotGuideContent.swift
       - path: MotoBridge/Core/Audio/AudioCodec.swift
       - path: MotoBridge/Core/Audio/VoiceEnhancer.swift

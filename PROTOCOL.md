@@ -20,7 +20,8 @@ Este documento define el protocolo que usa el **modo Universal** del bridge, par
 
 - **Tipo de servicio:** `_motobridge._udp`
 - **Dominio:** `local.`
-- **Nombre de instancia:** el nombre del dispositivo (p. ej. "iPhone de Ben", "Pixel 8").
+- **Nombre de instancia:** el nombre del rider, que debe ser único en el grupo. Es el nombre elegido por el usuario o, por defecto, `iPhone-XXXX` / `iPad-XXXX` / `Mac-XXXX` / `Android-XXXX`, con XXXX = 4 caracteres derivados del UID estable de la app (en Android, ANDROID_ID). Si se detecta otro peer con el mismo nombre, se añade el sufijo del UID. Spec: `.kiro/specs/unique-rider-name/`.
+- **Compatibilidad:** las versiones anteriores siguen anunciando el nombre del dispositivo (p. ej. "iPhone"); con ellas los nombres pueden repetirse y la regla de §3 y los mensajes privados por nombre (§ hash FNV-1a) no distinguen entre dos nombres iguales. El formato en el cable no cambia. Actualizar todas las apps del grupo lo resuelve.
 
 Cada dispositivo:
 1. **Publica** un servicio `_motobridge._udp` con un puerto UDP donde escucha.

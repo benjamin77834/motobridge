@@ -51,6 +51,10 @@ final class NetworkBridgeController: ObservableObject {
     @Published private(set) var connectedPeers: [TransportPeer] = []
     @Published private(set) var events: [String] = []
     @Published private(set) var localName: String = ""
+    /// Muestra la pregunta "¿Cuál es tu nombre?" (primer arranque).
+    @Published var showNamePrompt = false
+    /// El nombre efectivo cambió con el bridge en marcha; se aplica al detenerlo.
+    private var namePendingApply = false
 
     // Estado POR CANAL para el modo Auto (los dos a la vez). La UI resalta el
     // que esté conectando. Apple = Multipeer (iPhone↔iPhone); Universal = WiFi
@@ -1157,6 +1161,7 @@ final class NetworkBridgeController: ObservableObject {
                 self.syncNeighbors()
                 self.discoveredPeers = discovered
                 self.connectedPeers = connected
+                self.detectNameCollision(discovered + connected)
                 // Conteo del canal principal para resaltar el canal activo. En
                 // modo Universal puro el principal ES el canal WiFi.
                 if self.mode == .universal {
@@ -1369,6 +1374,7 @@ final class NetworkBridgeController: ObservableObject {
         }
         refreshMicPermission()
         isRunning = true
+        checkNamePrompt(.bridgeStart)   // recordatorio; el audio arranca sin esperar
         // Siempre arrancar en modo intercom (cascos), salvo walkie/música auto.
         if !walkieMode && !autoMusicMode && outputTarget != .headset {
             outputTarget = .headset
@@ -1673,6 +1679,7 @@ final class NetworkBridgeController: ObservableObject {
             self.audioIO.stop()
             self.deactivateAudioSession()
         }
+        if namePendingApply { rebuildTransportsForName() }
         log.info(.bridge, "NetworkBridge detenido")
     }
 
@@ -1691,20 +1698,51 @@ final class NetworkBridgeController: ObservableObject {
     }
 
     /// Guarda el nombre del rider y recrea el transporte para aplicarlo.
-    /// Solo con el bridge detenido.
+    /// Con el bridge en marcha solo se guarda; se aplica al detenerlo.
     func applyRiderName(_ name: String) {
-        let clean = String(name.prefix(30)).trimmingCharacters(in: .whitespaces)
+        let clean = RiderName.sanitize(name)
         UserDefaults.standard.set(clean, forKey: "riderName")
+        // Un nombre nuevo parte sin la marca de colisión del anterior.
+        UserDefaults.standard.set(false, forKey: RiderName.collisionKey)
         riderName = clean
-        guard !isRunning else { return }
-        // Recrear los transportes para que tomen el nombre nuevo.
-        peer = PeerBridgeSession()
-        if mode == .apple { transport = peer }
-        else { transport = LocalNetworkTransport() }
-        wireTransport(transport)
-        log.info(.bridge, "Nombre de rider: \(clean.isEmpty ? "(dispositivo)" : clean)")
+        guard !isRunning else { namePendingApply = true; return }
+        rebuildTransportsForName()
+        log.info(.bridge, "Nombre de rider: \(localName)")
     }
-
+    /// Recrea los transportes para que tomen el nombre efectivo vigente.
+    private func rebuildTransportsForName() {
+        namePendingApply = false
+        peer = PeerBridgeSession()
+        applyModeTransports()
+    }
+    // MARK: Nombre único y pregunta de primer arranque
+    /// Sugerencia mostrada en "¿Cuál es tu nombre?" (automática: iPhone-XXXX).
+    var suggestedRiderName: String {
+        RiderName.automatic(prefix: PeerBridgeSession.devicePrefix, uid: PeerBridgeSession.deviceUID)
+    }
+    /// Pide el nombre si corresponde (ver `RiderNamePromptPolicy`). No bloquea el audio.
+    func checkNamePrompt(_ trigger: RiderNamePromptPolicy.Trigger) {
+        let policy = RiderNamePromptPolicy()
+        guard !showNamePrompt, policy.shouldPrompt(trigger) else { return }
+        policy.markShown()
+        showNamePrompt = true
+    }
+    /// El usuario confirmó (o editó) el nombre del cuadro.
+    func submitNamePrompt(_ name: String) {
+        showNamePrompt = false
+        if RiderNamePromptPolicy().save(name) { applyRiderName(RiderName.sanitize(name)) }
+    }
+    /// El usuario omitió: se usa el automático con sufijo.
+    func skipNamePrompt() { showNamePrompt = false }
+    /// Si otro peer lleva mi mismo nombre, se marca la colisión y se añade el
+    /// sufijo del UID al reiniciar los transportes (MCPeerID no cambia en caliente).
+    private func detectNameCollision(_ peers: [TransportPeer]) {
+        guard !localName.isEmpty, !UserDefaults.standard.bool(forKey: RiderName.collisionKey),
+              RiderName.collides(local: localName, peers: peers.map(\.name)) else { return }
+        UserDefaults.standard.set(true, forKey: RiderName.collisionKey)
+        namePendingApply = true
+        log.warning(.bridge, "Nombre repetido \"\(localName)\": se añadirá el sufijo del UID al reiniciar el bridge")
+    }
     /// Prepara/lista las rutas de audio SIN iniciar el bridge, para elegir
     /// audífono/intercom antes de conectar. Activa la sesión brevemente para
     /// que iOS exponga los dispositivos Bluetooth disponibles.

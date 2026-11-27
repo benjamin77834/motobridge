@@ -1,0 +1,11 @@
+# Tareas: unique-rider-name
+- [x] 1. Spec y `PROTOCOL.md` (compatibilidad con apps viejas).
+- [x] 2. `RiderIdentity.swift`: nombre automático, efectivo, colisión y política de pregunta.
+  - _Requisitos: R1, R2, R3_
+- [x] 3. iOS: transportes con nombre efectivo, detección de colisión, pregunta de primer arranque, "Mi nombre" en la pantalla.
+  - _Requisitos: R1, R2, R3_
+- [x] 4. Mac Relay: nombre efectivo, campo "Mi nombre" con aviso.
+- [x] 5. Android: `RiderIdentity.kt`, `BridgeController`, diálogo en `MainActivity`.
+- [x] 6. Pruebas iOS (`RiderNameTests`) y Android (`RiderNameTest`); las existentes siguen pasando.
+- [ ] 7. Prueba en dispositivo: dos iPhone nuevos con nombres distintos conectan por UDP y Multipeer; mensaje privado llega solo al destinatario; la pregunta aparece una vez al abrir y una al iniciar el bridge si se omitió.
+- [ ] 8. Decidir cuándo se retira la compatibilidad con apps que anuncian "iPhone" (spec 1, R8).

@@ -3,6 +3,9 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Sin publicar]
+### Nombre único del rider
+- Nombre por defecto `iPhone-XXXX` / `iPad-XXXX` / `Mac-XXXX` / `Android-XXXX` (XXXX del UID de la app) y sufijo automático si otro peer repite el nombre. Se usa en Multipeer, Bonjour/UDP, presencia, mensajes privados, pickup, radar, reloj y Mac Relay.
+- Pregunta "¿Cuál es tu nombre?" al primer arranque (máximo 2 veces, no bloquea el audio); editable en Ajustes ("Mi nombre"). Apps viejas siguen mostrando nombres repetidos.
 ### Apple Watch — control remoto
 - `MotoBridgeWatch` (watchOS 10+, id `com.motobridge.app.monkeyfon.watchkitapp`) incrustado en la app iOS: micrófono abrir/cerrar, alarma con confirmación y háptica, estado de riders y bridge, iniciar/detener. Sin audio en el reloj.
 - Protocolo versionado y validado (`WatchProtocol.swift`, compartido); el iPhone es la fuente de verdad. Reemplaza al antiguo mensaje `ptt`.

@@ -8,7 +8,10 @@ import androidx.compose.runtime.setValue
 import com.motobridge.android.audio.AudioIO
 import com.motobridge.android.audio.OpusCodec
 import com.motobridge.android.audio.PcmCodec
+import com.motobridge.android.net.KeyValueStore
 import com.motobridge.android.net.LocalNetworkTransport
+import com.motobridge.android.net.RiderName
+import com.motobridge.android.net.RiderNamePromptPolicy
 import com.motobridge.android.net.TransportState
 
 /**
@@ -27,7 +30,50 @@ class BridgeController(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences("monobridge", Context.MODE_PRIVATE)
     private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-    private var localName = prefs.getString("riderName", null)?.takeIf { it.isNotBlank() } ?: (Build.MODEL ?: "Rider")
+    /** UID propio de la app: ANDROID_ID (sin permisos) o un UUID guardado si no hay. */
+    private val deviceUid: String = run {
+        val aid = runCatching {
+            android.provider.Settings.Secure.getString(appContext.contentResolver, android.provider.Settings.Secure.ANDROID_ID)
+        }.getOrNull()
+        if (!aid.isNullOrBlank() && aid != "9774d56d682e549c") aid
+        else prefs.getString("deviceUID", null) ?: java.util.UUID.randomUUID().toString().also {
+            prefs.edit().putString("deviceUID", it).apply()
+        }
+    }
+    private val store = object : KeyValueStore {
+        override fun getString(key: String) = prefs.getString(key, null)
+        override fun getInt(key: String) = prefs.getInt(key, 0)
+        override fun getBoolean(key: String) = prefs.getBoolean(key, false)
+        override fun putString(key: String, value: String) { prefs.edit().putString(key, value).apply() }
+        override fun putInt(key: String, value: Int) { prefs.edit().putInt(key, value).apply() }
+        override fun putBoolean(key: String, value: Boolean) { prefs.edit().putBoolean(key, value).apply() }
+    }
+    private val promptPolicy = RiderNamePromptPolicy(store)
+    private fun effectiveName() = RiderName.effective(
+        prefs.getString(RiderName.KEY_NAME, null), "Android", deviceUid,
+        prefs.getBoolean(RiderName.KEY_COLLISION, false))
+    private var localName = effectiveName()
+    private var namePendingApply = false
+    /** Nombre automático sugerido (Android-XXXX) para la pregunta "¿Cuál es tu nombre?". */
+    val suggestedRiderName: String get() = RiderName.automatic("Android", deviceUid)
+    var showNamePrompt by mutableStateOf(false); private set
+    /** Pide el nombre si corresponde (máx. 2 veces). No bloquea el audio. */
+    fun checkNamePrompt(trigger: RiderNamePromptPolicy.Trigger) {
+        if (showNamePrompt || !promptPolicy.shouldPrompt(trigger)) return
+        promptPolicy.markShown()
+        showNamePrompt = true
+    }
+    fun submitNamePrompt(name: String) {
+        showNamePrompt = false
+        if (promptPolicy.save(name)) applyRiderName(name)
+    }
+    fun skipNamePrompt() { showNamePrompt = false }
+    private fun rebuildTransportForName() {
+        namePendingApply = false
+        localName = effectiveName()
+        transport = LocalNetworkTransport(appContext, localName)
+        wire()
+    }
 
     private val audio = AudioIO()
     private var transport = LocalNetworkTransport(appContext, localName)
@@ -413,6 +459,11 @@ class BridgeController(context: Context) {
             if (autoIntercom && knownPeers.isEmpty() && newSet.isNotEmpty()) {
                 updateTransmitting(true)
             }
+            if (RiderName.collides(localName, newSet) && !prefs.getBoolean(RiderName.KEY_COLLISION, false)) {
+                // Otro peer con mi mismo nombre: sufijo del UID al reiniciar el transporte.
+                prefs.edit().putBoolean(RiderName.KEY_COLLISION, true).apply()
+                namePendingApply = true
+            }
             knownPeers = newSet
             capabilities.retainNeighbors(newSet)
             peerName = name
@@ -540,15 +591,13 @@ class BridgeController(context: Context) {
         } catch (_: Exception) {}
     }
 
-    /** Guarda el nombre del rider y recrea el transporte para aplicarlo. */
+    /** Guarda el nombre del rider y recrea el transporte para aplicarlo (con el bridge detenido). */
     fun applyRiderName(name: String) {
-        val clean = name.take(30).trim()
-        prefs.edit().putString("riderName", clean).apply()
+        val clean = RiderName.sanitize(name)
+        prefs.edit().putString(RiderName.KEY_NAME, clean).putBoolean(RiderName.KEY_COLLISION, false).apply()
         riderName = clean
-        if (isRunning) return
-        localName = clean.ifBlank { Build.MODEL ?: "Rider" }
-        transport = LocalNetworkTransport(appContext, localName)
-        wire()
+        if (isRunning) { namePendingApply = true; return }  // se aplica al detener
+        rebuildTransportForName()
     }
 
     /** Cierra el bridge, libera audio y termina la app (no gasta batería). */
@@ -560,6 +609,7 @@ class BridgeController(context: Context) {
     fun start() {
         if (isRunning) return
         isRunning = true
+        checkNamePrompt(RiderNamePromptPolicy.Trigger.BRIDGE_START)  // recordatorio; no espera
         // Servicio en primer plano: mantiene audio y red vivos con la pantalla
         // apagada (si no, Android suspende el proceso al dormir el teléfono).
         BridgeService.start(appContext)
@@ -605,6 +655,7 @@ class BridgeController(context: Context) {
         audio.stop()
         routeToMedia() // restaurar modo normal al salir
         BridgeService.stop(appContext) // quitar servicio en primer plano
+        if (namePendingApply) rebuildTransportForName()
     }
 
     /** Lee los botones multimedia del intercom (Hysnox) vía MediaSession:

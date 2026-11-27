@@ -48,8 +48,8 @@ final class LocalNetworkTransport: AudioTransport {
     private static let pickupHold: TimeInterval = 60
 
     init() {
-        let saved = UserDefaults.standard.string(forKey: "riderName")
-        self.localName = (saved?.isEmpty == false ? saved! : UIDevice.current.name)
+        self.localName = RiderName.current(prefix: PeerBridgeSession.devicePrefix,
+                                           uid: PeerBridgeSession.deviceUID)
     }
 
     // MARK: - Control
