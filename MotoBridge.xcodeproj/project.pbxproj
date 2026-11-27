@@ -10,6 +10,7 @@
 		002724A472D68AD28F8A2195 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14569E9F3FF76A9725C03102 /* WatchBridge.swift */; };
 		0434F6C4655E71B023C3DFEA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3D87CB699F2B1EF3A72E7B0C /* Assets.xcassets */; };
 		05E47515E99D85A42D3912F3 /* RelayAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8007F93A7156DE233E818E56 /* RelayAudio.swift */; };
+		086D1BD8589253825E26AD82 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2E5ECA0C2029551082D9CA06 /* Assets.xcassets */; };
 		17CCAA91008E77F3494A1CA1 /* MeshRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */; };
 		28903BF099EABBC9505D341E /* AppIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = D73608A31D00D54C0275CF7A /* AppIcon.svg */; };
 		2A171020DEB4ECE9077F65F7 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C42EBC7A7DBE2293B9D5EBE /* AppState.swift */; };
@@ -17,33 +18,44 @@
 		2F621B630907BABCDB0B2374 /* RelaySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0830C76A43C6EA7F180FE856 /* RelaySession.swift */; };
 		2F8AB49CA8FC2F34725AD4B1 /* OpusCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC21EBD18C639E527A56D797 /* OpusCodec.swift */; };
 		355B3034534947CEC2CB0E24 /* HotspotGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B64F83AF419B8308560DDCB /* HotspotGuideView.swift */; };
+		3E0A210A8788C72DC042016E /* WatchCommandHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = C62683AD11BC8D99A0305688 /* WatchCommandHandler.swift */; };
 		402DEBD572A183B00DABA53A /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55BF19FCFE50A747E7C04C5B /* AudioSessionManager.swift */; };
 		4139839F9CA39BFF4CE9B3A5 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E0A81559B8E2835AE5F780 /* SettingsView.swift */; };
 		457B287847424C27A805D7E4 /* AudioCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2826E967233D3C971337E9F8 /* AudioCodec.swift */; };
 		46A0AAADFF2B7405F3D6676B /* VoiceEnhancer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC83DDBF5548389BC949696 /* VoiceEnhancer.swift */; };
+		4D632612E7C64495B5AA995B /* WatchProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FE28387BBB575BF4A7EE6CA /* WatchProtocol.swift */; };
 		551D13D3C201F1815B6D078F /* LocalNetworkTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F58EC3B8B3DA3607714FBB1 /* LocalNetworkTransport.swift */; };
+		555C1CD186BA9C14A35A54E2 /* WatchProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FE28387BBB575BF4A7EE6CA /* WatchProtocol.swift */; };
 		5B6E1981AF6CDC100004C22B /* PeerBridgeSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 168F2607A0C6C75F9A54514A /* PeerBridgeSession.swift */; };
+		5D108085BD59E92751DE0A17 /* ConfirmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 036F752B59CA465CFD1998E8 /* ConfirmView.swift */; };
 		6465A038E45ADED840FB9BB1 /* RescueSensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF9580AA4ADF0354C618C0C /* RescueSensors.swift */; };
 		663A38D6D9F86591AD0619D2 /* RelayApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5830CE4282DEA1D89F851A0E /* RelayApp.swift */; };
 		6876A29CC800732D3C61530B /* TrailSparkline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75E19ACCE648FF970E174DC5 /* TrailSparkline.swift */; };
 		69FEC27F72BEA16F9EDAED80 /* PeerCapabilitiesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC681D53281EF827A1BECF2C /* PeerCapabilitiesTests.swift */; };
 		6EA3F4C9BE04F70D8039C707 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00398E2CF63EB430C40CA29 /* DashboardView.swift */; };
 		6F3077C53DE6EE1BFAE85F0B /* PeerCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA818FD4C3ED59E4327853E0 /* PeerCapabilities.swift */; };
+		719FF6B62F4E3ED332EEE5B9 /* MotoBridgeWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0573804E6479F6032888F15C /* MotoBridgeWatchApp.swift */; };
 		72F5D40344BE88A28FBC6356 /* MotoBridgeIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF01898A30F24B8F72F05CF7 /* MotoBridgeIntents.swift */; };
 		7A2337F6902A973C7659606D /* RemoteControlManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59ADA87FF916BF8D514DE639 /* RemoteControlManager.swift */; };
 		7D24130E22540C70E52D7195 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C5059A7A9A5DD05947BACC5 /* Assets.xcassets */; };
+		7EB987D563DF96ADB3415DD6 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55E6385A12EBE37701B09D39 /* Haptics.swift */; };
+		812A8AAB303C189CBEE8B926 /* WatchRemoteModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EBDEDE97283D3270953C592 /* WatchRemoteModel.swift */; };
 		89DB8051D90B9BB7AA5A6478 /* IntercomDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DFB6FCF0D1AE67FB56C4653 /* IntercomDevice.swift */; };
 		8D22C5026EA644FB635B06B8 /* VoiceChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */; };
 		8F4CDC6BBD58A5A18E4BA334 /* UniversalTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B9011F11E0CA9A2AF51AD37 /* UniversalTransport.swift */; };
 		97EF3F195FB248C10A7B31E7 /* RadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC10E228F756A59AB17CCE5A /* RadarView.swift */; };
+		998E5C1E97DAB5CD6516C6A7 /* WatchProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C398977C7E3256A5628A293A /* WatchProtocolTests.swift */; };
 		9FE43B4358E991592EA8B9AE /* VoiceChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3726FFE5A6F2DDD1CA3F1F /* VoiceChannel.swift */; };
+		A373C506CD5EAEEB00A93C08 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C52725320CDE29D69C4DF690 /* ContentView.swift */; };
 		A5368E58837BF2A32D982652 /* NetworkBridgeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */; };
 		A8BF4C9B3F31E1637E9B5FE5 /* VoiceEnhancer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC83DDBF5548389BC949696 /* VoiceEnhancer.swift */; };
 		B1A3C275B88ED8EF5CF3783D /* AudioBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106FAF4B343CB07D8D4C874A /* AudioBridgeTests.swift */; };
 		B570DC84322DDFFC6B7B789E /* PeerCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA818FD4C3ED59E4327853E0 /* PeerCapabilities.swift */; };
 		B92E5E72E331404C242E96F6 /* AudioTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47FAFD435FA35518B85EB99B /* AudioTransport.swift */; };
 		BB3AB2390E656EF8DC3239DE /* MeshRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */; };
+		BD7C0189D1F27FBF2822E687 /* MotoBridgeWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 193F8952DDB6C09DA710BAF4 /* MotoBridgeWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C05F1887ED16D7E685C51B6E /* CallKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E30CBE0D99AAA8BB74D3E37 /* CallKitManager.swift */; };
+		C29BA8DD6A6C77A657F9EFB3 /* WatchCommandHandlerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22518AFB5416A83B1969DA6C /* WatchCommandHandlerTests.swift */; };
 		D03330360E1BB3E99C824D32 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 288B6115B720CFEF4733A7CD /* Logger.swift */; };
 		D7369E4CA10188A5A12EE763 /* Opus in Frameworks */ = {isa = PBXBuildFile; productRef = 8DB3C465C966D433BD6CE562 /* Opus */; };
 		E4D0BF35115C81F2DE626EF8 /* AudioIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C62488C8C39EC93531E9631 /* AudioIO.swift */; };
@@ -65,10 +77,33 @@
 			remoteGlobalIDString = 52F74A5193C83E08514C4F6B;
 			remoteInfo = MotoBridge;
 		};
+		B3EB09980B1495A20A387F5B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5C34E6F113A1CC728863DA76 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C337E7709A7F0C89E0AEFC46;
+			remoteInfo = MotoBridgeWatch;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		93799275DE93E34E25D77DA4 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				BD7C0189D1F27FBF2822E687 /* MotoBridgeWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		036F752B59CA465CFD1998E8 /* ConfirmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmView.swift; sourceTree = "<group>"; };
 		04F61816098242C272FE1BA1 /* MotoBridgeTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MotoBridgeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0573804E6479F6032888F15C /* MotoBridgeWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotoBridgeWatchApp.swift; sourceTree = "<group>"; };
 		06E0A81559B8E2835AE5F780 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		07ECC8C3E436BEB17E9E4788 /* MotoBridgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotoBridgeApp.swift; sourceTree = "<group>"; };
 		0830C76A43C6EA7F180FE856 /* RelaySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelaySession.swift; sourceTree = "<group>"; };
@@ -78,17 +113,21 @@
 		106FAF4B343CB07D8D4C874A /* AudioBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBridgeTests.swift; sourceTree = "<group>"; };
 		14569E9F3FF76A9725C03102 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		168F2607A0C6C75F9A54514A /* PeerBridgeSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerBridgeSession.swift; sourceTree = "<group>"; };
+		193F8952DDB6C09DA710BAF4 /* MotoBridgeWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MotoBridgeWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1F58EC3B8B3DA3607714FBB1 /* LocalNetworkTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNetworkTransport.swift; sourceTree = "<group>"; };
+		22518AFB5416A83B1969DA6C /* WatchCommandHandlerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchCommandHandlerTests.swift; sourceTree = "<group>"; };
 		236CBD4CDDBC2A7F5CD55EDB /* MeshRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshRelay.swift; sourceTree = "<group>"; };
 		2826E967233D3C971337E9F8 /* AudioCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCodec.swift; sourceTree = "<group>"; };
 		288B6115B720CFEF4733A7CD /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		2ADA7F7E767C932537748638 /* MotoBridge.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MotoBridge.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2B64F83AF419B8308560DDCB /* HotspotGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotspotGuideView.swift; sourceTree = "<group>"; };
+		2E5ECA0C2029551082D9CA06 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3D87CB699F2B1EF3A72E7B0C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3DFB6FCF0D1AE67FB56C4653 /* IntercomDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntercomDevice.swift; sourceTree = "<group>"; };
 		47FAFD435FA35518B85EB99B /* AudioTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTransport.swift; sourceTree = "<group>"; };
 		500A3DA22CFF9C2552638BF7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		55BF19FCFE50A747E7C04C5B /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
+		55E6385A12EBE37701B09D39 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		5830CE4282DEA1D89F851A0E /* RelayApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayApp.swift; sourceTree = "<group>"; };
 		59ADA87FF916BF8D514DE639 /* RemoteControlManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteControlManager.swift; sourceTree = "<group>"; };
 		5C5059A7A9A5DD05947BACC5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -99,14 +138,19 @@
 		707A2E8A53190514E043717E /* AudioBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBridge.swift; sourceTree = "<group>"; };
 		75E19ACCE648FF970E174DC5 /* TrailSparkline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrailSparkline.swift; sourceTree = "<group>"; };
 		77EDDAC5C8DBFCF68787123D /* NetworkBridgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeView.swift; sourceTree = "<group>"; };
+		7EBDEDE97283D3270953C592 /* WatchRemoteModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRemoteModel.swift; sourceTree = "<group>"; };
 		8007F93A7156DE233E818E56 /* RelayAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayAudio.swift; sourceTree = "<group>"; };
 		80AB55036F3E549ABA10A4D7 /* HotspotGuideContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotspotGuideContent.swift; sourceTree = "<group>"; };
 		80CF211F3BDA6713A45C7216 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		86AA256260EDF3BC7E654623 /* NetworkBridgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkBridgeController.swift; sourceTree = "<group>"; };
+		8FE28387BBB575BF4A7EE6CA /* WatchProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProtocol.swift; sourceTree = "<group>"; };
 		9B9011F11E0CA9A2AF51AD37 /* UniversalTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalTransport.swift; sourceTree = "<group>"; };
 		9C62488C8C39EC93531E9631 /* AudioIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioIO.swift; sourceTree = "<group>"; };
 		9E30CBE0D99AAA8BB74D3E37 /* CallKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallKitManager.swift; sourceTree = "<group>"; };
 		BF01898A30F24B8F72F05CF7 /* MotoBridgeIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotoBridgeIntents.swift; sourceTree = "<group>"; };
+		C398977C7E3256A5628A293A /* WatchProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProtocolTests.swift; sourceTree = "<group>"; };
+		C52725320CDE29D69C4DF690 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		C62683AD11BC8D99A0305688 /* WatchCommandHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchCommandHandler.swift; sourceTree = "<group>"; };
 		CBF9580AA4ADF0354C618C0C /* RescueSensors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RescueSensors.swift; sourceTree = "<group>"; };
 		D00398E2CF63EB430C40CA29 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		D73608A31D00D54C0275CF7A /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
@@ -150,6 +194,8 @@
 			children = (
 				106FAF4B343CB07D8D4C874A /* AudioBridgeTests.swift */,
 				DC681D53281EF827A1BECF2C /* PeerCapabilitiesTests.swift */,
+				22518AFB5416A83B1969DA6C /* WatchCommandHandlerTests.swift */,
+				C398977C7E3256A5628A293A /* WatchProtocolTests.swift */,
 			);
 			path = MotoBridgeTests;
 			sourceTree = "<group>";
@@ -185,8 +231,22 @@
 				0D4068B829A80F08DE80C8C6 /* MonoBridgeRelay.app */,
 				2ADA7F7E767C932537748638 /* MotoBridge.app */,
 				04F61816098242C272FE1BA1 /* MotoBridgeTests.xctest */,
+				193F8952DDB6C09DA710BAF4 /* MotoBridgeWatch.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		2DE61ED2D5F3FBE6675F89FD /* MotoBridgeWatch */ = {
+			isa = PBXGroup;
+			children = (
+				2E5ECA0C2029551082D9CA06 /* Assets.xcassets */,
+				036F752B59CA465CFD1998E8 /* ConfirmView.swift */,
+				C52725320CDE29D69C4DF690 /* ContentView.swift */,
+				55E6385A12EBE37701B09D39 /* Haptics.swift */,
+				0573804E6479F6032888F15C /* MotoBridgeWatchApp.swift */,
+				7EBDEDE97283D3270953C592 /* WatchRemoteModel.swift */,
+			);
+			path = MotoBridgeWatch;
 			sourceTree = "<group>";
 		};
 		334E8D9FFB00B551709B5C01 = {
@@ -195,6 +255,7 @@
 				022D1C67B82E3833360CE595 /* MonoBridgeRelay */,
 				731D43447BDEF6F12CEB4F97 /* MotoBridge */,
 				0F49FD9DCCC6B32EC464FDF6 /* MotoBridgeTests */,
+				2DE61ED2D5F3FBE6675F89FD /* MotoBridgeWatch */,
 				2A02EC0B2868C64418210DC8 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -329,6 +390,8 @@
 			isa = PBXGroup;
 			children = (
 				14569E9F3FF76A9725C03102 /* WatchBridge.swift */,
+				C62683AD11BC8D99A0305688 /* WatchCommandHandler.swift */,
+				8FE28387BBB575BF4A7EE6CA /* WatchProtocol.swift */,
 			);
 			path = Watch;
 			sourceTree = "<group>";
@@ -376,10 +439,12 @@
 				593CCF0E571CABFF16727411 /* Sources */,
 				C14408AA5B8A263183993DF7 /* Resources */,
 				367EFEC28F4C056453C8B143 /* Frameworks */,
+				93799275DE93E34E25D77DA4 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				65BAFBC8EC7AFAC7390470A8 /* PBXTargetDependency */,
 			);
 			name = MotoBridge;
 			packageProductDependencies = (
@@ -405,6 +470,24 @@
 			);
 			productName = MonoBridgeRelay;
 			productReference = 0D4068B829A80F08DE80C8C6 /* MonoBridgeRelay.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C337E7709A7F0C89E0AEFC46 /* MotoBridgeWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 66FBAE645DBE7CB513B5B95C /* Build configuration list for PBXNativeTarget "MotoBridgeWatch" */;
+			buildPhases = (
+				3CE93D873C9114F8A9CD58B2 /* Sources */,
+				36CA3FA83928A359E2416137 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MotoBridgeWatch;
+			packageProductDependencies = (
+			);
+			productName = MotoBridgeWatch;
+			productReference = 193F8952DDB6C09DA710BAF4 /* MotoBridgeWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
 		E66864FF295E7A63DDB2C123 /* MotoBridgeTests */ = {
@@ -442,6 +525,10 @@
 						DevelopmentTeam = 48V68SFH7Q;
 						ProvisioningStyle = Automatic;
 					};
+					C337E7709A7F0C89E0AEFC46 = {
+						DevelopmentTeam = 48V68SFH7Q;
+						ProvisioningStyle = Automatic;
+					};
 					E66864FF295E7A63DDB2C123 = {
 						DevelopmentTeam = 48V68SFH7Q;
 						ProvisioningStyle = Automatic;
@@ -468,11 +555,20 @@
 				B1BBA749AC81500F43C8C415 /* MonoBridgeRelay */,
 				52F74A5193C83E08514C4F6B /* MotoBridge */,
 				E66864FF295E7A63DDB2C123 /* MotoBridgeTests */,
+				C337E7709A7F0C89E0AEFC46 /* MotoBridgeWatch */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		36CA3FA83928A359E2416137 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				086D1BD8589253825E26AD82 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		639B6C0BF0C2EF62C1C5B0B4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -499,6 +595,21 @@
 			files = (
 				B1A3C275B88ED8EF5CF3783D /* AudioBridgeTests.swift in Sources */,
 				69FEC27F72BEA16F9EDAED80 /* PeerCapabilitiesTests.swift in Sources */,
+				C29BA8DD6A6C77A657F9EFB3 /* WatchCommandHandlerTests.swift in Sources */,
+				998E5C1E97DAB5CD6516C6A7 /* WatchProtocolTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3CE93D873C9114F8A9CD58B2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5D108085BD59E92751DE0A17 /* ConfirmView.swift in Sources */,
+				A373C506CD5EAEEB00A93C08 /* ContentView.swift in Sources */,
+				7EB987D563DF96ADB3415DD6 /* Haptics.swift in Sources */,
+				719FF6B62F4E3ED332EEE5B9 /* MotoBridgeWatchApp.swift in Sources */,
+				4D632612E7C64495B5AA995B /* WatchProtocol.swift in Sources */,
+				812A8AAB303C189CBEE8B926 /* WatchRemoteModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -536,6 +647,8 @@
 				8D22C5026EA644FB635B06B8 /* VoiceChannel.swift in Sources */,
 				A8BF4C9B3F31E1637E9B5FE5 /* VoiceEnhancer.swift in Sources */,
 				002724A472D68AD28F8A2195 /* WatchBridge.swift in Sources */,
+				3E0A210A8788C72DC042016E /* WatchCommandHandler.swift in Sources */,
+				555C1CD186BA9C14A35A54E2 /* WatchProtocol.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -561,6 +674,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		65BAFBC8EC7AFAC7390470A8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C337E7709A7F0C89E0AEFC46 /* MotoBridgeWatch */;
+			targetProxy = B3EB09980B1495A20A387F5B /* PBXContainerItemProxy */;
+		};
 		9477C6EE2B5CA8A9F7187596 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 52F74A5193C83E08514C4F6B /* MotoBridge */;
@@ -669,6 +787,25 @@
 			};
 			name = Debug;
 		};
+		AD4879DD616C05BAB57959A0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Mono Bridge";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.motobridge.app.monkeyfon;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.monkeyfon.watchkitapp;
+				PRODUCT_NAME = MotoBridgeWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
 		D9CAB859778CF1CA163EF8B9 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -687,6 +824,25 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		DA13D7DFFE0B950D7328D29F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Mono Bridge";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.motobridge.app.monkeyfon;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.motobridge.app.monkeyfon.watchkitapp;
+				PRODUCT_NAME = MotoBridgeWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
 		};
 		E3A9127459124CF579DBF2FD /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -827,6 +983,15 @@
 			buildConfigurations = (
 				F293E03CED684FD38B05B548 /* Debug */,
 				E3A9127459124CF579DBF2FD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		66FBAE645DBE7CB513B5B95C /* Build configuration list for PBXNativeTarget "MotoBridgeWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DA13D7DFFE0B950D7328D29F /* Debug */,
+				AD4879DD616C05BAB57959A0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

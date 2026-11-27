@@ -1,29 +1,28 @@
 import Foundation
+import Combine
 #if canImport(WatchConnectivity)
 import WatchConnectivity
 #endif
 
 /// Puente de conectividad con el Apple Watch (lado iPhone).
 ///
-/// El Apple Watch NO transporta audio del bridge (watchOS no lo permite, ver
-/// KNOWN_LIMITATIONS L11). Su rol es ser un **botón de push-to-talk remoto**:
-/// cuando el piloto mantiene el botón en la muñeca, el Watch envía un mensaje
-/// y el iPhone activa/desactiva la transmisión. El audio sigue en el iPhone.
-final class WatchBridge: NSObject, ObservableObject {
-
-    /// Se invoca cuando el Watch pide transmitir (true) o soltar (false).
-    var onPTTChange: ((Bool) -> Void)?
-
-    @Published private(set) var isReachable = false
+/// El Apple Watch es solo un control remoto: manda comandos (micrófono, alarma,
+/// iniciar/detener) y muestra el estado. NO transporta audio. El iPhone es la
+/// fuente de verdad: publica el estado completo cada vez que algo cambia.
+final class WatchBridge: NSObject {
+    static let shared = WatchBridge()
 
     private let log = Logger.shared
+    private var handler: WatchCommandHandler?
+    private var cancellable: AnyCancellable?
+    private var lastContextWarning = Date.distantPast
 
-    override init() {
+    private override init() {
         super.init()
-        activate()
     }
 
-    private func activate() {
+    /// Activa la sesión. Barato: no toca micrófono ni audio.
+    func activate() {
         #if canImport(WatchConnectivity)
         guard WCSession.isSupported() else {
             log.info(.general, "WatchConnectivity no soportado en este dispositivo")
@@ -36,45 +35,87 @@ final class WatchBridge: NSObject, ObservableObject {
         #endif
     }
 
-    /// Envía el estado actual al Watch (para reflejar conexión, etc.).
-    func sendStateToWatch(connected: Bool) {
+    /// Conecta el controlador (idempotente). Lo llama el `init` del controlador.
+    func attach(_ controller: NetworkBridgeController) {
+        guard handler == nil else { return }
+        handler = WatchCommandHandler(bridge: controller)
         #if canImport(WatchConnectivity)
-        let session = WCSession.default
-        guard session.activationState == .activated else { return }
-        let payload: [String: Any] = ["connected": connected]
-        if session.isReachable {
-            session.sendMessage(payload, replyHandler: nil, errorHandler: nil)
-        } else {
-            try? session.updateApplicationContext(payload)
-        }
+        guard WCSession.isSupported() else { return }
+        cancellable = Publishers.CombineLatest4(
+            controller.$isRunning, controller.$isTransmitting,
+            controller.$alarmActive, controller.$connectedPeers
+        )
+        .throttle(for: .milliseconds(200), scheduler: DispatchQueue.main, latest: true)
+        .sink { [weak self] _ in self?.publishState() }
         #endif
     }
+
+    #if canImport(WatchConnectivity)
+    /// Publica el estado: contexto siempre; más `sendMessage` si el reloj es alcanzable.
+    private func publishState() {
+        let session = WCSession.default
+        guard session.activationState == .activated,
+              session.isPaired, session.isWatchAppInstalled,
+              let handler else { return }
+        let payload = handler.makeState().dictionary
+        do {
+            try session.updateApplicationContext(payload)
+        } catch {
+            if Date().timeIntervalSince(lastContextWarning) > 60 {
+                lastContextWarning = Date()
+                log.warning(.general, "Watch: updateApplicationContext falló: \(error.localizedDescription)")
+            }
+        }
+        if session.isReachable {
+            session.sendMessage(payload, replyHandler: nil) { [weak self] error in
+                self?.log.debug(.general, "Watch: sendMessage de estado falló: \(error.localizedDescription)")
+            }
+        }
+    }
+    #endif
 }
 
 #if canImport(WatchConnectivity)
 extension WatchBridge: WCSessionDelegate {
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        DispatchQueue.main.async { self.isReachable = session.isReachable }
+        if let error {
+            log.error(.general, "Watch: activación fallida: \(error.localizedDescription)")
+            return
+        }
+        DispatchQueue.main.async { self.publishState() }
     }
 
     func sessionReachabilityDidChange(_ session: WCSession) {
-        DispatchQueue.main.async { self.isReachable = session.isReachable }
+        DispatchQueue.main.async { self.publishState() }
+    }
+
+    func sessionWatchStateDidChange(_ session: WCSession) {
+        DispatchQueue.main.async { self.publishState() }
     }
 
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        // Comando de PTT desde el Watch.
-        if let ptt = message["ptt"] as? Bool {
-            log.info(.bridge, "Watch PTT: \(ptt ? "ON" : "OFF")")
-            DispatchQueue.main.async { self.onPTTChange?(ptt) }
+        log.warning(.bridge, "Watch: mensaje sin replyHandler ignorado")
+    }
+
+    func session(_ session: WCSession, didReceiveMessage message: [String: Any],
+                 replyHandler: @escaping ([String: Any]) -> Void) {
+        DispatchQueue.main.async {
+            // Si el controlador aún no existe (app lanzada en segundo plano),
+            // crearlo aquí lo crea y llama a `attach`.
+            if self.handler == nil { _ = NetworkBridgeController.shared }
+            guard let handler = self.handler else {
+                replyHandler(WatchReply(ok: false, err: .internal, note: nil, state: nil).dictionary)
+                return
+            }
+            handler.handle(message, completion: replyHandler)
         }
     }
 
-    #if os(iOS)
     func sessionDidBecomeInactive(_ session: WCSession) {}
+
     func sessionDidDeactivate(_ session: WCSession) {
         // Reactivar para futuros emparejamientos de Watch.
         WCSession.default.activate()
     }
-    #endif
 }
 #endif

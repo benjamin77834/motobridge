@@ -4,6 +4,12 @@ import SwiftUI
 struct MotoBridgeApp: App {
     @StateObject private var appState = AppState()
 
+    init() {
+        // El delegado de WatchConnectivity debe existir antes de que llegue un
+        // mensaje del reloj (la app puede lanzarse en segundo plano).
+        WatchBridge.shared.activate()
+    }
+
     var body: some Scene {
         WindowGroup {
             NavigationStack {

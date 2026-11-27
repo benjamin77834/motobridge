@@ -1,0 +1,65 @@
+# Tareas: watch-remote-control
+Independiente de los demás specs. Orden: primero se prueba que el proyecto compila y firma (tarea 1), después el protocolo y el iPhone (2 y 3), luego el reloj (4 y 5), y al final la prueba en dispositivos y la documentación (6 a 8). Cada tarea deja los builds existentes compilando.
+- [~] 1. Línea base y prueba de firma (antes de escribir código de la app)
+  - [x] 1.1 Registrar que compilan hoy: `xcodebuild -scheme MotoBridge` (iOS, simulador), `-scheme MonoBridgeRelay` (macOS) y `./gradlew assembleDebug` en `android/`. Anotar la versión de Xcode (`xcodebuild -version`; el README de specs fija 27.2.1 y la máquina del spec informó 27.0).
+  - [x] 1.2 En `project.yml`, activar la dependencia `- target: MotoBridgeWatch` con `embed: true` en `MotoBridge` y reemplazar el bloque comentado del reloj por el target de la decisión 5 (id `com.motobridge.app.monkeyfon.watchkitapp`, `TARGETED_DEVICE_FAMILY: "4"`, `deploymentTarget: "10.0"`, `sources` con `MotoBridgeWatch` y `WatchProtocol.swift`). Quitar los comentarios de "Watch desactivado".
+  - [x] 1.3 Crear un `WatchProtocol.swift` vacío (solo `import Foundation`) para que el target compile; `xcodegen generate`.
+  - [ ] 1.4 (pendiente la compilación para dispositivo con -allowProvisioningUpdates; solo se verificó simulador) Compilar el esquema `MotoBridge` para simulador de iPhone con reloj, y para dispositivo con `-allowProvisioningUpdates` (requiere sesión de la cuenta 48V68SFH7Q en Xcode). Comprobar que el App ID del reloj se crea sin cambiar el perfil del iPhone.
+  - [x] 1.5 Comprobar la clave `INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp` en el Info.plist generado y que Xcode 27 compila con watchOS 10.0 (si no, subir a 11.0 y anotarlo en el design).
+  - [x] 1.6 Revisar el diff de `MotoBridge.xcodeproj/`: solo agregar el target del reloj, la fase de incrustación y archivos. Si cambia otra cosa (por ejemplo, la versión del formato del proyecto por la versión de xcodegen), anotarlo y decidir con el usuario.
+  - CT: R6.1 a R6.6 (sin lógica aún). Si la firma falla por la cuenta, detener y avisar al usuario antes de seguir; no se cambian certificados.
+  - Pruebas: compilación; revisión del diff.
+  - _Requisitos: R6_
+- [x] 2. Protocolo compartido
+  - [x] 2.1 `MotoBridge/Core/Watch/WatchProtocol.swift`: claves, `WatchCommand` con `parse(_:)`, `WatchReply`, `WatchState` con `parse(_:)` y saneado de nombres, códigos de error, `WatchStateStore` (aplicar con secuencia; `reset` para `getState`).
+  - [x] 2.2 `MotoBridgeTests/WatchProtocolTests.swift` con los casos de la sección de pruebas del design.
+  - CT: R7.1, R7.2, R7.4, R3.3, R3.4. Los tests pasan en el esquema `MotoBridge`.
+  - Pruebas: unitarias.
+  - _Requisitos: R3, R7_
+- [x] 3. Lado iPhone
+  - [x] 3.1 `WatchCommandHandler.swift`: protocolo `BridgeControlling`, tabla de reglas de la decisión 4, cola de los últimos 16 `id`, respuesta construida en el salto de cola principal posterior a la acción. Extensión de `NetworkBridgeController` con `connectedPeerNames` y `canStartRemotely`, y los cuatro métodos que delegan en `setTransmitting`, `sendAlarm`, `start` y `stop`.
+  - [x] 3.2 Reescribir `WatchBridge.swift`: singleton, `WCSessionDelegate` con `didReceiveMessage(_:replyHandler:)`, `attach(_:)` con `CombineLatest4` y `throttle(200 ms)`, publicación por contexto más `sendMessage` si es alcanzable, solo si `isSupported && isPaired && isWatchAppInstalled`; reactivación en `sessionDidDeactivate`; registro según la tabla de errores.
+  - [x] 3.3 `NetworkBridgeController.swift`: quitar `private let watch` y la línea 1093; reemplazar el bloque `onPTTChange` por `WatchBridge.shared.attach(self)` al final del `init`. `MotoBridgeApp.swift`: activar `WatchBridge.shared` en `init()`.
+  - [x] 3.4 `MotoBridgeTests/WatchCommandHandlerTests.swift` con un `FakeBridge`.
+  - CT: R1.1, R1.4, R1.5, R2.7 a R2.9, R5.1 a R5.4 (lado iPhone), R7.2, R7.3, NF1 a NF3. `grep -n "ptt\|onPTTChange\|sendStateToWatch" MotoBridge` no devuelve nada. `setTransmitting`, `sendAlarm`, `start` y `stop` no cambian (revisar el diff).
+  - Pruebas: unitarias del handler; compilación de los tres esquemas.
+  - _Requisitos: R1, R2, R5, R7_
+- [x] 4. App del reloj: modelo y protocolo
+  - [x] 4.1 Eliminar `WatchConnectivityClient.swift` y `WatchPTTView.swift`. Crear `WatchRemoteModel.swift` (`@MainActor`, `WCSessionDelegate`, `state`, `reachable`, `controlOp`, `alarmOp`, `refreshing`, métodos `refresh`, `setMic`, `sendAlarm`, `startBridge`, `stopBridge`, temporizador de 5 s por comando, aplicación del contexto y de los mensajes con `WatchStateStore`). Crear `Haptics.swift`.
+  - [x] 4.2 `MotoBridgeWatchApp.swift`: un solo modelo como `environmentObject`; `refresh()` al pasar `scenePhase` a `.active` y al cambiar la alcanzabilidad.
+  - CT: R3.1, R3.4, R3.5, R4.3, R4.4, R2.5, R2.6.
+  - Pruebas: el modelo es una capa fina sobre `WatchStateStore` (probada en la tarea 2); verificación manual en el simulador emparejado.
+  - _Requisitos: R2, R3, R4_
+- [x] 5. App del reloj: pantallas
+  - [x] 5.1 `ContentView.swift`: `TabView` vertical con las páginas Control, Estado y Bridge; franja fija "iPhone no alcanzable"; valores "—" y controles deshabilitados sin enlace; texto de motivos de la decisión 8.
+  - [x] 5.2 `ConfirmView.swift`: confirmación de alarma y de detener, con cuenta atrás de 5 s y cancelación automática; pantalla roja "Alarma enviada" de 3 s y pantalla "NO SE ENVIÓ".
+  - [x] 5.3 Etiquetas de VoiceOver, objetivos ≥ 44 pt, estado no solo por color. Vistas previas (`#Preview`) para los estados: sin enlace, bridge detenido, con riders, alarma activa, fallo de alarma.
+  - [x] 5.4 Icono del reloj: reemplazar el `Contents.json` y copiar `AppIcon-1024.png` del iPhone.
+  - CT: R1.2, R1.6, R2.1 a R2.4, R2.7, R3.2 (interfaz), R3.3, R3.6, R4.1, R4.2, R6.7, NF4, NF5.
+  - Pruebas: previews y simulador; la háptica solo en dispositivo (tarea 6).
+  - _Requisitos: R1 a R5, R6.7_
+- [ ] 6. Prueba en dispositivos reales (iPhone y Apple Watch emparejados)
+  - [ ] 6.1 Instalar la build en el iPhone y el reloj con firma automática. Anotar modelo del reloj, watchOS e iOS.
+  - [ ] 6.2 Con el bridge corriendo y un segundo rider conectado: abrir y cerrar el micrófono desde el reloj (G1), alarma desde el reloj oída por el otro rider (G2), ver nombres y número de riders.
+  - [ ] 6.3 Medir 30 cambios de estado iniciados en el iPhone y anotar el tiempo hasta que el reloj los muestra (p95 ≤ 2 s, R3.2).
+  - [ ] 6.4 Apagar el Bluetooth del reloj: aviso "iPhone no alcanzable", controles deshabilitados, "—" (G3). Volver a encenderlo: el aviso desaparece y el estado se actualiza en ≤ 1 s (R4.3).
+  - [ ] 6.5 Casos con el iPhone bloqueado, con la app en segundo plano y con la app cerrada por el usuario: anotar si el reloj sigue alcanzable y si los comandos llegan. Anotar si `startBridge` funciona o responde `needsPhone`.
+  - [ ] 6.6 Confirmar la háptica de éxito y de fallo (alarma enviada; alarma con el bridge detenido; alarma con el Bluetooth del reloj apagado).
+  - [ ] 6.7 Confirmar que "Mono Bridge" no se trunca en la cuadrícula del reloj.
+  - CT: G1 a G3; resultados anotados en `NETWORK_BRIDGE_TEST.md` o en una sección de `TEST_PLAN.md` (la que ya use el proyecto para pruebas en dispositivo).
+  - Pruebas: manual con dispositivos; requiere al usuario con los dos aparatos.
+  - _Requisitos: R1 a R5, NF4_
+- [ ] 7. Medición para hablar mientras se mantiene (solo evidencia, no se implementa el gesto)
+  - [ ] 7.1 Con una build de prueba local (no se integra), medir 200 pulsaciones: tiempo desde el toque hasta `setTransmitting` en el iPhone, con el iPhone desbloqueado y bloqueado; contar mensajes perdidos.
+  - [ ] 7.2 Anotar en el design (decisión 2) los números y si se cumple el criterio (p95 ≤ 300 ms, 0 pérdidas). Si se cumple, abrir un spec nuevo; si no, cerrar la idea.
+  - CT: números registrados en el design. Ningún código de la medición queda en `main`.
+  - Pruebas: manual con dispositivos.
+  - _Requisitos: ninguno (cierra un punto abierto)_
+- [ ] 8. Verificación final y documentación
+  - [x] 8.1 Compilar de nuevo los tres builds (iOS con tests, Mac Relay, Android) y comparar con la línea base de la tarea 1.1 (G4, R6.5).
+  - [ ] 8.2 `xcodebuild archive` del esquema `MotoBridge` y comprobar que el reloj está dentro de `Watch/` del .app, con versión igual y firma válida (G5). No subir a TestFlight.
+  - [x] 8.3 Reescribir `KNOWN_LIMITATIONS.md` L11 (incluida la limitación de que la alarma cierra el micrófono abierto), `README.md`, `CHANGELOG.md` y, si menciona módulos, `ARCHITECTURE.md`.
+  - [ ] 8.4 Si el spec 5 aún no está aplicado, añadir la nota de coordinación: al subir iOS a 26, el mínimo del reloj sube a 26.0 en el mismo cambio de `project.yml`.
+  - CT: R6.1 a R6.7, G4, G5.
+  - Pruebas: compilación y archivo; revisión de documentos.
+  - _Requisitos: R6_

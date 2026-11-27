@@ -2,6 +2,12 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/).
 
+## [Sin publicar]
+### Apple Watch — control remoto
+- `MotoBridgeWatch` (watchOS 10+, id `com.motobridge.app.monkeyfon.watchkitapp`) incrustado en la app iOS: micrófono abrir/cerrar, alarma con confirmación y háptica, estado de riders y bridge, iniciar/detener. Sin audio en el reloj.
+- Protocolo versionado y validado (`WatchProtocol.swift`, compartido); el iPhone es la fuente de verdad. Reemplaza al antiguo mensaje `ptt`.
+- Aviso "iPhone no alcanzable" y controles deshabilitados sin enlace.
+
 ## [0.8.1] — 2026-09-24
 
 ### Fix de estabilidad — el mesh causaba desconexiones con 2 dispositivos

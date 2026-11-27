@@ -21,7 +21,6 @@ final class NetworkBridgeController: ObservableObject {
     private(set) var peer = PeerBridgeSession()   // transporte Apple (Multipeer)
     private let audioIO = AudioIO()
     private let audioSession = AVAudioSession.sharedInstance()
-    private let watch = WatchBridge()
     private let log = Logger.shared
     private var cancellables = Set<AnyCancellable>()
 
@@ -516,10 +515,6 @@ final class NetworkBridgeController: ObservableObject {
             guard let self, self.rescueMode else { return }
             DispatchQueue.main.async { self.rescueSensors.noteSignalSample(level) }
         }
-        // PTT remoto desde el Apple Watch -> activar/desactivar transmisión.
-        watch.onPTTChange = { [weak self] transmitting in
-            self?.setTransmitting(transmitting)
-        }
         // Audio capturado -> envolver con canal (grupo/privado/alarma) -> enviar.
         audioIO.onCapturedAudio = { [weak self] data in
             guard let self else { return }
@@ -626,6 +621,8 @@ final class NetworkBridgeController: ObservableObject {
         applyModeTransports()
         peer.autoConnect = peerAutoConnect   // aplicar modo manual/auto guardado
         peer.onPickup = { [weak self] name in self?.handlePickup(from: name) }
+        // Control remoto desde el Apple Watch: publica estado y recibe comandos.
+        WatchBridge.shared.attach(self)
     }
 
     /// Maneja un cambio de ruta de audio del sistema (p. ej. conectar AirPods).
@@ -1090,7 +1087,6 @@ final class NetworkBridgeController: ObservableObject {
         t.onStateChange = { [weak self] s in
             DispatchQueue.main.async {
                 self?.state = s
-                self?.watch.sendStateToWatch(connected: s == .connected)
             }
         }
         t.onPeersChange = { [weak self] discovered, connected in

@@ -53,10 +53,10 @@ Para el bridge bidireccional, cada lado necesita un dispositivo de audio con **m
 ## L10 — Cancelación de eco (AEC)
 Se habilita el voice processing nativo de iOS (`setVoiceProcessingEnabled`). Reduce el eco en manos libres bidireccional. No es perfecto en todos los dispositivos ni con todos los cascos; si hay acople residual, usar push-to-talk o separar los dispositivos. En moto real (cascos lejanos entre motos) el eco no es problema.
 
-## L11 — Apple Watch no puede ser nodo del bridge (pero SÍ es PTT remoto)
+## L11 — Apple Watch no puede ser nodo del bridge (pero SÍ es control remoto)
 watchOS no dispone de MultipeerConnectivity ni de streaming de audio en vivo de baja latencia para apps de terceros. El Apple Watch **no** puede reemplazar a un iPhone/iPad como extremo del bridge (el audio no pasa por el Watch).
 
-**Implementado:** app watchOS (`MotoBridgeWatch`) con un **botón de push-to-talk remoto**. Al mantenerlo, el Watch envía el comando por `WatchConnectivity` y el iPhone activa la transmisión; el audio sigue pasando por el iPhone. El Watch también muestra si el bridge está conectado. Ideal para moto: hablar sin soltar el manillar.
+**Implementado:** app watchOS (`MotoBridgeWatch`) como **control remoto** por `WatchConnectivity`: abrir/cerrar el micrófono del iPhone, alarma de emergencia (con confirmación), ver estado (bridge activo, micrófono, riders conectados y sus nombres) e iniciar/detener el bridge. El audio sigue por el iPhone y sus audífonos. Sin enlace, el reloj muestra "iPhone no alcanzable" y deshabilita todo. Limitaciones: no hay hablar-mientras-se-mantiene (un "soltar" perdido dejaría el micrófono abierto); iniciar el bridge solo funciona con permiso de micrófono concedido y la app abierta en el iPhone; la alarma cierra el micrófono a los ~6 s, también si el rider lo había abierto.
 
 ## L12 — Android: fase separada
 El transporte actual (MultipeerConnectivity) es exclusivo de Apple. Para incluir Android se requiere una app nativa Android y un transporte neutral multiplataforma (WebRTC o sockets UDP + mDNS/Bonjour). Es una fase de proyecto aparte, no un ajuste menor.

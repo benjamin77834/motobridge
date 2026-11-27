@@ -6,7 +6,7 @@ Intercomunicador de motocicleta entre teléfonos. Conecta a varios motociclistas
 
 - **`web/`** — Sitio web / landing page (se despliega en AWS Amplify).
 - **`MotoBridge/`** — App iOS (SwiftUI). Se abre con `MotoBridge.xcodeproj` (generado con XcodeGen desde `project.yml`).
-- **`MotoBridgeWatch/`** — App para Apple Watch (push-to-talk remoto).
+- **`MotoBridgeWatch/`** — App para Apple Watch (control remoto: micrófono, alarma, estado, iniciar/detener; sin audio). `xcodegen generate` incluye el target y lo incrusta en la app iOS.
 - **`android/`** — App Android (Kotlin + Jetpack Compose).
 - **`store/`** — Material para las tiendas (íconos, capturas, textos, política de privacidad).
 - **`PROTOCOL.md`** — Protocolo de red neutral para interoperar iOS ↔ Android.
