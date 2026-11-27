@@ -146,19 +146,70 @@ final class NetworkBridgeController: ObservableObject {
 
     /// Ganancia digital del micrófono (1.0–6.0). Sube el volumen de tu voz.
     @Published var micGain: Float = 3.0 {
-        didSet { audioIO.captureGain = micGain }
+        didSet { audioIO.captureGain = micGain; saveActiveHeadsetProfile() }
     }
 
     /// Ganancia de salida (1.0–6.0). Sube el volumen de lo que escuchas,
     /// útil para salidas "bajas" como las Ray-Ban Meta.
     @Published var speakerGain: Float = 1.0 {
-        didSet { audioIO.outputGain = speakerGain }
+        didSet { audioIO.outputGain = speakerGain; saveActiveHeadsetProfile() }
     }
 
     /// Umbral del noise gate (0.0–0.1). Más alto = corta más ruido de fondo
     /// (música, calle) cuando no hablas. Filtra la voz de la música ambiente.
     @Published var noiseGate: Float = 0.015 {
-        didSet { audioIO.gateThreshold = noiseGate }
+        didSet { audioIO.gateThreshold = noiseGate; saveActiveHeadsetProfile() }
+    }
+    /// Realce de voz (paso-banda, presencia, gate). Se recuerda por audífono.
+    @Published var voiceEnhancement: Bool = true {
+        didSet { audioIO.voiceEnhancementEnabled = voiceEnhancement; saveActiveHeadsetProfile() }
+    }
+    // MARK: Perfil por audífono
+    private let headsetProfiles = HeadsetProfileStore()
+    /// Clave del audífono activo (nil = micrófono/altavoz del teléfono, sin perfil).
+    private var activeHeadsetKey: String?
+    /// Valores por defecto del audífono activo (según calidad), para restablecer.
+    private var headsetDefaults = HeadsetProfile(speakerGain: 1.0, gateThreshold: 0.012, voiceEnhancement: true, micGain: 3.0)
+    /// true mientras la app (no el usuario) cambia los valores: no se guardan.
+    private var applyingHeadsetProfile = false
+    @Published private(set) var activeHeadsetName: String = ""
+    @Published private(set) var activeHeadsetHasProfile: Bool = false
+    private func saveActiveHeadsetProfile() {
+        guard !applyingHeadsetProfile, let key = activeHeadsetKey else { return }
+        headsetProfiles.save(HeadsetProfile(speakerGain: speakerGain, gateThreshold: noiseGate,
+                                            voiceEnhancement: voiceEnhancement, micGain: micGain), for: key)
+        activeHeadsetHasProfile = true
+    }
+    private func setHeadsetValues(_ p: HeadsetProfile) {
+        applyingHeadsetProfile = true
+        speakerGain = p.speakerGain
+        noiseGate = p.gateThreshold
+        voiceEnhancement = p.voiceEnhancement
+        micGain = p.micGain
+        applyingHeadsetProfile = false
+    }
+    /// Borra el perfil guardado del audífono activo y vuelve a sus valores por defecto.
+    func resetActiveHeadsetProfile() {
+        guard let key = activeHeadsetKey else { return }
+        headsetProfiles.remove(key)
+        activeHeadsetHasProfile = false
+        setHeadsetValues(headsetDefaults)
+    }
+    /// Aplica el perfil del audífono activo (o los valores por defecto la primera
+    /// vez que se ve). Debe llamarse en el hilo principal.
+    private func applyHeadsetProfile(key: String?, name: String, defaults: HeadsetProfile) {
+        let changed = key != activeHeadsetKey
+        activeHeadsetKey = key
+        activeHeadsetName = key == nil ? "" : name
+        headsetDefaults = defaults
+        guard let key else { activeHeadsetHasProfile = false; return }
+        if let saved = headsetProfiles.profile(for: key) {
+            activeHeadsetHasProfile = true
+            setHeadsetValues(saved)
+        } else {
+            activeHeadsetHasProfile = false
+            if changed { setHeadsetValues(defaults) }
+        }
     }
 
     /// Compresión Opus. DESACTIVADO por defecto (PCM es el modo más simple). El
@@ -1428,7 +1479,10 @@ final class NetworkBridgeController: ObservableObject {
         if isRayBan, !rayBanAutoBoosted {
             rayBanAutoBoosted = true
             DispatchQueue.main.async {
+                // Valor por defecto, no un ajuste del usuario: no se guarda en el perfil.
+                self.applyingHeadsetProfile = true
                 if self.speakerGain < 3.0 { self.speakerGain = 3.0 } // sube volumen de escucha
+                self.applyingHeadsetProfile = false
             }
             log.info(.audioRoute, "Ray-Ban Meta detectadas: ganancia de escucha aumentada")
         } else if !isRayBan {
@@ -1450,6 +1504,20 @@ final class NetworkBridgeController: ObservableObject {
         case .low:
             audioIO.gateThreshold = 0.018
             audioIO.voiceEnhancementEnabled = true
+        }
+        // Perfil por audífono: el activo es la primera entrada no integrada
+        // (o, sin ella, la primera salida no integrada).
+        let headsetPort = (route.inputs + route.outputs).first {
+            HeadsetIdentity.key(portName: $0.portName, portType: $0.portType.rawValue) != nil
+        }
+        let headsetKey = headsetPort.flatMap { HeadsetIdentity.key(portName: $0.portName, portType: $0.portType.rawValue) }
+        let headsetName = headsetPort?.portName ?? ""
+        let profileDefaults = HeadsetProfile(speakerGain: isRayBan ? 3.0 : 1.0,
+                                             gateThreshold: audioIO.gateThreshold,
+                                             voiceEnhancement: audioIO.voiceEnhancementEnabled,
+                                             micGain: 3.0)
+        DispatchQueue.main.async {
+            self.applyHeadsetProfile(key: headsetKey, name: headsetName, defaults: profileDefaults)
         }
 
         DispatchQueue.main.async {

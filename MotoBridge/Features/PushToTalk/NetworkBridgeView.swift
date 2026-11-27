@@ -1094,6 +1094,21 @@ struct NetworkBridgeView: View {
                     .font(.caption2).foregroundStyle(.secondary)
             }
 
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle(isOn: $controller.voiceEnhancement) {
+                    Text("Mejora de voz").font(.subheadline)
+                }
+                if controller.activeHeadsetName.isEmpty {
+                    Text("Perfil de audífono: ninguno (micrófono y altavoz del teléfono).")
+                        .font(.caption2).foregroundStyle(.secondary)
+                } else {
+                    Text("Perfil de \(controller.activeHeadsetName): \(controller.activeHeadsetHasProfile ? "guardado" : "valores por defecto, se guarda al ajustar"). Dos cascos del mismo modelo y nombre comparten perfil.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                    Button("Restablecer perfil del audífono") { controller.resetActiveHeadsetProfile() }
+                        .font(.caption)
+                        .disabled(!controller.activeHeadsetHasProfile)
+                }
+            }
             Toggle(isOn: $controller.opusEnabled) {
                 Text("Compresión Opus (recomendado)")
                     .font(.subheadline.weight(.semibold))
